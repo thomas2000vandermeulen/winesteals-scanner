@@ -50,15 +50,18 @@ Extraheer ALLE wijnen uit onderstaande wijnkaart tekst.
 
 Regels:
 - Geef ALLEEN een JSON array terug, geen uitleg of andere tekst
-- Negeer sectieheaders zoals "ROOD", "WIT", "BUBBELS", etc.
-- Negeer beschrijvingen van druivenrassen en regio's
+- Negeer sectieheaders zoals "ROOD", "WIT", "BUBBELS", "CHAMPAGNE", etc.
+- Negeer beschrijvingen van druivenrassen en regio's (bijv. "Pinot Noir - Champagne, Frankrijk")
 - Negeer aperitief, cocktails, bier, frisdrank
 - Elke wijn heeft: name, producer, vintage (null als NV), price (getal), bottle_format (null/"½ fles"/"magnum" etc.)
-- Bij twee prijzen op één regel (glas + fles): gebruik de hogere prijs (flesprijs)
-- Naam = de wijnnaam of appellation (bijv. "Morgon", "Gevrey-Chambertin 1er Cru")
-- Producer = de producent/domaine (bijv. "Foillard", "Rossignol-Trapet")
-- Als naam en producer onduidelijk zijn: producer = eerste deel, name = tweede deel
-- Vintage als getal (2021) of null voor non-vintage
+- Bij twee prijzen op één regel (glas + fles, bijv. "11  65" of "8 / 45"): gebruik ALTIJD de hogere prijs (dat is de flesprijs)
+- Bij prijs per glas notatie ("8 /", "7.5 /", "11 /") zonder flesprijs: sla de wijn over — geen flesprijs beschikbaar
+- Naam = de wijnnaam of appellation (bijv. "Morgon", "Gevrey-Chambertin 1er Cru", "Brut Réserve")
+- Producer = de producent/domaine (bijv. "Foillard", "Rossignol-Trapet", "Pol Roger")
+- Als naam en producer onduidelijk zijn: producer = eerste deel voor komma of pipe, name = tweede deel
+- Vintage als getal (2021) of null voor non-vintage — let op PDF artefacten zoals "202 2" = 2022
+- Negeer PDF artefacten: losse cijfers, "/" tekens, paginanummers, puntjes
+- Als een regel er niet uitziet als een wijn (geen herkende naam of prijs): sla over
 
 Wijnkaart van ${restaurant || 'onbekend restaurant'}:
 
