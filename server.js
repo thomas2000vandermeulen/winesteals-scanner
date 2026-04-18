@@ -23,8 +23,12 @@ const anthropic = new Anthropic({
 });
 
 // Health check
+const path = require('path');
+
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.get('/', (req, res) => {
-  res.json({ status: 'ok', service: 'WineSteals AI Scanner' });
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Hoofd endpoint — verwerk wijnkaart tekst
