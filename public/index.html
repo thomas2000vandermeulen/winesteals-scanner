@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WineSteals — Find the bottles worth ordering</title>
+  <meta name="description" content="Scan any restaurant wine list and instantly find the bottles that are sharply priced. WineSteals uses AI to surface the steals — so you always order the best value on the menu." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── RESET & BASE ─────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    :root {
+      --wine: #7B1C2E;
+      --wine-light: #A8324A;
+      --wine-dark: #4A0F1C;
+      --gold: #C9A84C;
+      --gold-light: #E8C97A;
+      --cream: #F8F4EE;
+      --ink: #1A1208;
+      --muted: #6B5E52;
+      --surface: #FFFFFF;
+      --border: rgba(123,28,46,0.12);
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── ANIMATIONS ───────────────────────────────── */
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(18px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+    @keyframes tickerScroll { 0%{transform:translateX(0);} 100%{transform:translateX(-50%);} }
+
+    .fade-up { opacity:0; animation: fadeUp 0.65s ease forwards; }
+    .fade-up.d1 { animation-delay: 0.1s; }
+    .fade-up.d2 { animation-delay: 0.25s; }
+    .fade-up.d3 { animation-delay: 0.4s; }
+    .fade-up.d4 { animation-delay: 0.55s; }
+
+    /* ── LANGUAGE TOGGLE ──────────────────────────── */
+    .lang-toggle { display:flex; align-items:center; border:0.5px solid rgba(123,28,46,0.25); border-radius:2px; overflow:hidden; }
+    .lang-btn { padding:0.35rem 0.8rem; font-family:'DM Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; cursor:pointer; border:none; background:transparent; color:var(--muted); transition:all 0.2s; }
+    .lang-btn.active { background:var(--wine); color:var(--cream); }
+    .lang-btn:not(.active):hover { background:rgba(123,28,46,0.07); color:var(--wine); }
+
+    /* ── NAV ──────────────────────────────────────── */
+    .nav {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:1.1rem 2.5rem;
+      border-bottom:0.5px solid var(--border);
+      background:var(--cream);
+      position:sticky; top:0; z-index:100;
+    }
+    .logo { font-family:'Playfair Display',serif; font-size:1.35rem; font-weight:700; color:var(--wine-dark); display:flex; align-items:center; gap:8px; text-decoration:none; }
+    .logo-dot { width:7px; height:7px; background:var(--gold); border-radius:50%; }
+    .nav-links { display:flex; gap:1.75rem; list-style:none; font-size:0.8rem; font-weight:500; color:var(--muted); letter-spacing:0.05em; text-transform:uppercase; }
+    .nav-links li a { color:inherit; text-decoration:none; transition:color 0.2s; }
+    .nav-links li a:hover { color:var(--wine); }
+    .nav-right { display:flex; align-items:center; gap:1.25rem; }
+    .nav-cta { background:var(--wine); color:var(--cream); border:none; padding:0.45rem 1.1rem; border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.8rem; font-weight:500; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; transition:background 0.2s; text-decoration:none; display:inline-block; }
+    .nav-cta:hover { background:var(--wine-dark); }
+
+    /* ── TICKER ───────────────────────────────────── */
+    .ticker { background:var(--wine); overflow:hidden; height:36px; display:flex; align-items:center; }
+    .ticker-track { display:flex; white-space:nowrap; animation:tickerScroll 28s linear infinite; }
+    .ticker-item { font-family:'DM Mono',monospace; font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold); padding:0 2.5rem; display:flex; align-items:center; gap:0.75rem; }
+    .ticker-item::after { content:'·'; color:rgba(201,168,76,0.4); }
+
+    /* ── HERO ─────────────────────────────────────── */
+    .hero { display:grid; grid-template-columns:1fr 1fr; min-height:88vh; align-items:stretch; }
+    .hero-left { padding:5rem 3rem 5rem 2.5rem; display:flex; flex-direction:column; justify-content:center; border-right:0.5px solid var(--border); }
+    .eyebrow { font-family:'DM Mono',monospace; font-size:0.68rem; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold); margin-bottom:1.4rem; display:flex; align-items:center; gap:10px; }
+    .eyebrow::before { content:''; display:block; width:24px; height:1px; background:var(--gold); }
+    .hero-title { font-family:'Playfair Display',serif; font-size:clamp(2.6rem,4.5vw,4rem); line-height:1.06; font-weight:700; color:var(--wine-dark); margin-bottom:1.6rem; }
+    .hero-title em { font-style:italic; color:var(--wine-light); }
+    .hero-sub { font-size:1rem; font-weight:300; color:var(--muted); line-height:1.75; max-width:420px; margin-bottom:2.5rem; }
+    .hero-actions { display:flex; gap:0.85rem; flex-wrap:wrap; margin-bottom:3rem; }
+    .btn-primary { background:var(--wine); color:var(--cream); border:none; padding:0.85rem 1.85rem; border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:500; cursor:pointer; letter-spacing:0.03em; transition:background 0.2s; text-decoration:none; display:inline-block; }
+    .btn-primary:hover { background:var(--wine-dark); }
+    .btn-ghost { background:transparent; color:var(--wine); border:0.5px solid var(--wine); padding:0.85rem 1.85rem; border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:500; cursor:pointer; transition:all 0.2s; text-decoration:none; display:inline-block; }
+    .btn-ghost:hover { background:var(--wine); color:var(--cream); }
+    .hero-trust { display:flex; align-items:center; gap:1.5rem; }
+    .trust-item { font-size:0.78rem; color:var(--muted); font-weight:300; display:flex; align-items:center; gap:6px; }
+    .trust-dot { width:4px; height:4px; background:var(--gold); border-radius:50%; }
+
+    /* HERO RIGHT */
+    .hero-right { background:var(--wine-dark); position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:3rem 2rem; }
+    .wine-bg-pattern { position:absolute; inset:0; opacity:0.04; background-image:repeating-linear-gradient(45deg,var(--gold) 0px,var(--gold) 1px,transparent 1px,transparent 40px); }
+    .scan-card { background:rgba(255,255,255,0.06); border:0.5px solid rgba(201,168,76,0.3); border-radius:3px; padding:1.85rem; width:100%; max-width:360px; position:relative; z-index:1; }
+    .scan-header { font-family:'DM Mono',monospace; font-size:0.62rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold); margin-bottom:1.35rem; display:flex; justify-content:space-between; align-items:center; }
+    .pulse-dot { width:6px; height:6px; background:#4CAF50; border-radius:50%; display:inline-block; animation:pulse 1.8s infinite; margin-right:5px; }
+    .wine-item { display:flex; align-items:center; justify-content:space-between; padding:0.7rem 0.9rem; border-radius:2px; background:rgba(255,255,255,0.04); border:0.5px solid rgba(255,255,255,0.06); margin-bottom:0.65rem; }
+    .wine-item.steal { background:rgba(201,168,76,0.12); border-color:rgba(201,168,76,0.35); }
+    .wine-name-card { font-family:'Playfair Display',serif; font-size:0.88rem; color:rgba(255,255,255,0.88); font-style:italic; }
+    .wine-meta-card { font-family:'DM Mono',monospace; font-size:0.62rem; color:rgba(255,255,255,0.32); margin-top:2px; }
+    .wine-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+    .wine-price { font-family:'DM Mono',monospace; font-size:0.88rem; color:rgba(255,255,255,0.72); }
+    .steal-badge { font-family:'DM Mono',monospace; font-size:0.58rem; letter-spacing:0.1em; text-transform:uppercase; background:var(--gold); color:var(--wine-dark); padding:2px 7px; border-radius:1px; font-weight:500; }
+    .score-bar { width:46px; height:3px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden; }
+    .score-fill { height:100%; border-radius:2px; background:var(--gold-light); }
+    .scan-footer { margin-top:1.35rem; padding-top:1rem; border-top:0.5px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; font-family:'DM Mono',monospace; font-size:0.62rem; color:rgba(255,255,255,0.3); letter-spacing:0.08em; text-transform:uppercase; }
+    .steals-count { color:var(--gold); font-size:0.78rem; font-weight:500; }
+
+    /* ── STATS BAR ────────────────────────────────── */
+    .stats-row { display:grid; grid-template-columns:repeat(3,1fr); border-top:0.5px solid var(--border); border-bottom:0.5px solid var(--border); }
+    .stat { padding:2.25rem 2.5rem; border-right:0.5px solid var(--border); }
+    .stat:last-child { border-right:none; }
+    .stat-num { font-family:'Playfair Display',serif; font-size:2.75rem; font-weight:700; color:var(--wine); line-height:1; margin-bottom:0.35rem; }
+    .stat-label { font-size:0.8rem; color:var(--muted); font-weight:300; line-height:1.5; }
+
+    /* ── CRAWLER SECTION ──────────────────────────── */
+    .crawler-band { background:var(--wine-dark); padding:5rem 2.5rem; position:relative; overflow:hidden; }
+    .crawler-band::before { content:''; position:absolute; inset:0; opacity:0.03; background-image:repeating-linear-gradient(-45deg,var(--gold) 0px,var(--gold) 1px,transparent 1px,transparent 40px); }
+    .crawler-inner { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1.1fr; gap:4rem; align-items:start; position:relative; z-index:1; }
+    .crawler-eyebrow { font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold); margin-bottom:0.75rem; }
+    .crawler-title { font-family:'Playfair Display',serif; font-size:2.25rem; font-weight:700; color:var(--cream); line-height:1.12; margin-bottom:1.25rem; }
+    .crawler-title em { font-style:italic; color:var(--gold-light); }
+    .crawler-desc { font-size:0.92rem; color:rgba(248,244,238,0.55); font-weight:300; line-height:1.8; margin-bottom:2rem; }
+    .crawler-stats { display:grid; grid-template-columns:1fr 1fr; gap:1.5px; background:rgba(255,255,255,0.06); }
+    .crawler-stat { background:rgba(255,255,255,0.03); padding:1.5rem 1.25rem; }
+    .crawler-stat-num { font-family:'Playfair Display',serif; font-size:2rem; font-weight:700; color:var(--gold); line-height:1; margin-bottom:0.3rem; }
+    .crawler-stat-label { font-size:0.75rem; color:rgba(248,244,238,0.4); font-weight:300; }
+    .live-feed { background:rgba(0,0,0,0.3); border:0.5px solid rgba(201,168,76,0.2); border-radius:3px; padding:1.5rem; }
+    .live-feed-header { font-family:'DM Mono',monospace; font-size:0.62rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold); margin-bottom:1.1rem; display:flex; align-items:center; gap:6px; }
+    .feed-item { display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0; border-bottom:0.5px solid rgba(255,255,255,0.05); }
+    .feed-item:last-of-type { border-bottom:none; }
+    .feed-restaurant { font-family:'Playfair Display',serif; font-style:italic; color:rgba(255,255,255,0.78); font-size:0.85rem; }
+    .feed-wine { font-size:0.68rem; color:rgba(255,255,255,0.32); font-family:'DM Mono',monospace; margin-top:2px; }
+    .feed-badge { font-family:'DM Mono',monospace; font-size:0.6rem; background:rgba(201,168,76,0.18); color:var(--gold); padding:2px 8px; border-radius:1px; white-space:nowrap; }
+    .feed-footer { margin-top:1rem; font-family:'DM Mono',monospace; font-size:0.6rem; color:rgba(255,255,255,0.22); letter-spacing:0.08em; text-transform:uppercase; }
+
+    /* ── DEMO / RESULTS ───────────────────────────── */
+    .demo-section { padding:5rem 2.5rem; background:white; border-top:0.5px solid var(--border); border-bottom:0.5px solid var(--border); }
+    .demo-inner { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1.2fr; gap:4rem; align-items:start; }
+    .section-eyebrow { font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold); margin-bottom:0.65rem; }
+    .section-title { font-family:'Playfair Display',serif; font-size:2rem; font-weight:700; color:var(--wine-dark); line-height:1.15; margin-bottom:1.35rem; }
+    .section-sub { font-size:0.9rem; color:var(--muted); font-weight:300; line-height:1.75; margin-bottom:2rem; }
+    .feature-list { list-style:none; display:flex; flex-direction:column; gap:1.25rem; }
+    .feature-item { display:flex; gap:1rem; align-items:flex-start; }
+    .feature-icon { width:32px; height:32px; background:rgba(123,28,46,0.07); border-radius:2px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:14px; }
+    .feature-text strong { display:block; font-size:0.9rem; font-weight:500; color:var(--wine-dark); margin-bottom:2px; }
+    .feature-text span { font-size:0.82rem; color:var(--muted); font-weight:300; }
+    .result-card { background:var(--cream); border:0.5px solid var(--border); border-radius:2px; overflow:hidden; }
+    .result-header { background:var(--wine-dark); padding:1rem 1.35rem; display:flex; justify-content:space-between; align-items:center; }
+    .result-header-title { font-family:'Playfair Display',serif; font-size:0.92rem; font-style:italic; color:rgba(255,255,255,0.92); }
+    .result-header-meta { font-family:'DM Mono',monospace; font-size:0.6rem; color:var(--gold); letter-spacing:0.1em; text-transform:uppercase; }
+    .result-row { display:flex; align-items:center; padding:0.95rem 1.35rem; border-bottom:0.5px solid var(--border); gap:0.9rem; transition:background 0.15s; }
+    .result-row:hover { background:rgba(255,255,255,0.7); }
+    .result-row:last-child { border-bottom:none; }
+    .result-row.top-steal { background:rgba(201,168,76,0.07); }
+    .steal-bar { width:3px; height:36px; background:var(--gold); border-radius:2px; flex-shrink:0; }
+    .steal-bar.none { background:transparent; }
+    .r-name { flex:1; }
+    .r-wine { font-family:'Playfair Display',serif; font-size:0.9rem; font-style:italic; color:var(--wine-dark); }
+    .r-region { font-size:0.68rem; color:var(--muted); font-family:'DM Mono',monospace; letter-spacing:0.05em; margin-top:2px; }
+    .r-prices { text-align:right; }
+    .r-list-price { font-size:0.88rem; color:var(--ink); font-family:'DM Mono',monospace; }
+    .r-market { font-size:0.7rem; color:var(--muted); font-weight:300; margin-top:1px; }
+    .score-circle { width:36px; height:36px; border-radius:50%; background:rgba(123,28,46,0.08); display:flex; align-items:center; justify-content:center; font-family:'DM Mono',monospace; font-size:0.72rem; font-weight:500; color:var(--wine); flex-shrink:0; }
+    .score-circle.high { background:rgba(201,168,76,0.2); color:#7A5A00; }
+
+    /* ── HOW IT WORKS ─────────────────────────────── */
+    .how-section { padding:5rem 2.5rem; max-width:1100px; margin:0 auto; }
+    .how-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5px; background:var(--border); border:0.5px solid var(--border); margin-top:3rem; }
+    .how-step { background:var(--cream); padding:2.5rem 2rem; }
+    .step-num { font-family:'Playfair Display',serif; font-size:3.25rem; font-weight:700; color:rgba(123,28,46,0.07); line-height:1; margin-bottom:1rem; }
+    .step-title { font-size:0.95rem; font-weight:500; color:var(--wine-dark); margin-bottom:0.5rem; }
+    .step-desc { font-size:0.85rem; color:var(--muted); line-height:1.7; font-weight:300; }
+    .step-tag { display:inline-block; margin-top:1rem; font-family:'DM Mono',monospace; font-size:0.6rem; letter-spacing:0.1em; text-transform:uppercase; background:rgba(201,168,76,0.15); color:#7A5A00; padding:3px 8px; border-radius:1px; }
+
+    /* ── WAITLIST / CTA ───────────────────────────── */
+    .waitlist-section { background:var(--wine-dark); padding:5.5rem 2.5rem; text-align:center; position:relative; overflow:hidden; }
+    .waitlist-section::before { content:''; position:absolute; inset:0; opacity:0.03; background-image:repeating-linear-gradient(-45deg,var(--gold) 0px,var(--gold) 1px,transparent 1px,transparent 40px); }
+    .waitlist-title { font-family:'Playfair Display',serif; font-size:2.8rem; font-weight:700; color:var(--cream); margin-bottom:0.9rem; position:relative; }
+    .waitlist-title em { font-style:italic; color:var(--gold-light); }
+    .waitlist-sub { font-size:1rem; color:rgba(248,244,238,0.5); font-weight:300; margin-bottom:2.5rem; position:relative; }
+    .waitlist-form { display:flex; gap:0; max-width:420px; margin:0 auto; position:relative; }
+    .waitlist-input { flex:1; padding:0.9rem 1.25rem; background:rgba(255,255,255,0.08); border:0.5px solid rgba(201,168,76,0.3); border-right:none; border-radius:2px 0 0 2px; font-family:'DM Sans',sans-serif; font-size:0.9rem; color:var(--cream); outline:none; transition:border-color 0.2s; }
+    .waitlist-input::placeholder { color:rgba(248,244,238,0.35); }
+    .waitlist-input:focus { border-color:rgba(201,168,76,0.6); }
+    .waitlist-submit { background:var(--gold); color:var(--wine-dark); border:none; padding:0.9rem 1.5rem; border-radius:0 2px 2px 0; font-family:'DM Sans',sans-serif; font-size:0.88rem; font-weight:500; cursor:pointer; transition:background 0.2s; white-space:nowrap; }
+    .waitlist-submit:hover { background:var(--gold-light); }
+    .waitlist-note { margin-top:1rem; font-size:0.75rem; color:rgba(248,244,238,0.3); font-weight:300; position:relative; }
+    .success-msg { display:none; font-family:'DM Mono',monospace; font-size:0.8rem; color:var(--gold); letter-spacing:0.08em; text-transform:uppercase; padding:1rem; border:0.5px solid rgba(201,168,76,0.3); border-radius:2px; max-width:420px; margin:0 auto; }
+
+    /* ── FOOTER ───────────────────────────────────── */
+    .footer { padding:2rem 2.5rem; border-top:0.5px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; }
+    .footer-logo { font-family:'Playfair Display',serif; font-size:1.05rem; color:var(--wine-dark); font-weight:700; display:flex; align-items:center; gap:7px; }
+    .footer-right { display:flex; align-items:center; gap:2rem; }
+    .footer-links { display:flex; gap:1.5rem; list-style:none; }
+    .footer-links a { font-size:0.78rem; color:var(--muted); text-decoration:none; font-weight:300; transition:color 0.2s; }
+    .footer-links a:hover { color:var(--wine); }
+    .footer-copy { font-size:0.75rem; color:var(--muted); font-weight:300; }
+
+    /* ── STORY SECTION ────────────────────────────── */
+    .story-section { padding:5.5rem 2.5rem; border-top:0.5px solid var(--border); border-bottom:0.5px solid var(--border); overflow:hidden; }
+    .story-inner { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1.15fr; gap:5rem; align-items:center; }
+    .story-left { position:relative; }
+    .story-bottle { position:relative; }
+    .story-bottle-card {
+      background:var(--wine-dark);
+      border-radius:3px;
+      padding:2.5rem 2rem;
+      position:relative;
+      overflow:hidden;
+    }
+    .story-bottle-card::before { content:''; position:absolute; inset:0; opacity:0.04; background-image:repeating-linear-gradient(45deg,var(--gold) 0px,var(--gold) 1px,transparent 1px,transparent 40px); }
+    .story-bottle-label { font-family:'DM Mono',monospace; font-size:0.62rem; letter-spacing:0.14em; text-transform:uppercase; color:rgba(201,168,76,0.6); margin-bottom:1.5rem; }
+    .story-wine-name { font-family:'Playfair Display',serif; font-size:1.6rem; font-weight:700; font-style:italic; color:var(--cream); line-height:1.15; margin-bottom:0.4rem; }
+    .story-wine-producer { font-family:'DM Mono',monospace; font-size:0.7rem; color:rgba(248,244,238,0.4); letter-spacing:0.08em; margin-bottom:2rem; }
+    .story-price-compare { display:grid; grid-template-columns:1fr 1fr; gap:1.5px; background:rgba(255,255,255,0.06); margin-bottom:1.5rem; }
+    .story-price-box { background:rgba(255,255,255,0.03); padding:1.1rem 1rem; }
+    .story-price-box.steal-box { background:rgba(201,168,76,0.1); }
+    .story-price-label { font-family:'DM Mono',monospace; font-size:0.6rem; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.3); margin-bottom:0.4rem; }
+    .story-price-val { font-family:'Playfair Display',serif; font-size:1.85rem; font-weight:700; color:var(--cream); line-height:1; }
+    .story-price-val.gold { color:var(--gold); }
+    .story-price-sub { font-size:0.7rem; color:rgba(255,255,255,0.3); font-weight:300; margin-top:3px; }
+    .story-saving { display:flex; align-items:center; justify-content:center; gap:0.6rem; padding:0.75rem; background:rgba(201,168,76,0.15); border:0.5px solid rgba(201,168,76,0.25); border-radius:2px; }
+    .story-saving-text { font-family:'DM Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold); }
+    .story-float-tag { position:absolute; top:-14px; right:-14px; background:var(--gold); color:var(--wine-dark); font-family:'DM Mono',monospace; font-size:0.62rem; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; padding:6px 12px; border-radius:2px; }
+
+    .story-right {}
+    .story-eyebrow { font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold); margin-bottom:0.75rem; display:flex; align-items:center; gap:10px; }
+    .story-eyebrow::before { content:''; display:block; width:20px; height:1px; background:var(--gold); }
+    .story-title { font-family:'Playfair Display',serif; font-size:2.15rem; font-weight:700; color:var(--wine-dark); line-height:1.12; margin-bottom:2rem; }
+    .story-title em { font-style:italic; color:var(--wine-light); }
+    .story-body { display:flex; flex-direction:column; gap:1.25rem; }
+    .story-para { font-size:0.95rem; color:var(--muted); font-weight:300; line-height:1.85; }
+    .story-para strong { color:var(--ink); font-weight:500; }
+    .story-quote { margin:0.5rem 0; padding:1.35rem 1.5rem; border-left:2px solid var(--gold); background:rgba(201,168,76,0.06); border-radius:0 2px 2px 0; }
+    .story-quote p { font-family:'Playfair Display',serif; font-size:1.05rem; font-style:italic; color:var(--wine-dark); line-height:1.65; }
+    .story-signature { margin-top:1.5rem; display:flex; align-items:center; gap:1rem; padding-top:1.5rem; border-top:0.5px solid var(--border); }
+    .story-avatar { width:44px; height:44px; border-radius:50%; background:var(--wine); display:flex; align-items:center; justify-content:center; font-family:'Playfair Display',serif; font-size:1rem; font-style:italic; color:var(--cream); flex-shrink:0; }
+    .story-sig-name { font-size:0.88rem; font-weight:500; color:var(--ink); }
+    .story-sig-role { font-size:0.75rem; color:var(--muted); font-weight:300; margin-top:1px; font-family:'DM Mono',monospace; letter-spacing:0.04em; }
+
+    /* ── HAMBURGER MENU ───────────────────────────── */
+    .hamburger { display:none; flex-direction:column; gap:5px; cursor:pointer; padding:4px; background:none; border:none; }
+    .hamburger span { display:block; width:22px; height:1.5px; background:var(--wine-dark); border-radius:2px; transition:all 0.25s; }
+    .hamburger.open span:nth-child(1) { transform:translateY(6.5px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity:0; }
+    .hamburger.open span:nth-child(3) { transform:translateY(-6.5px) rotate(-45deg); }
+    .mobile-menu { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:var(--cream); z-index:200; flex-direction:column; align-items:center; justify-content:center; gap:2.5rem; }
+    .mobile-menu.open { display:flex; }
+    .mobile-menu a { font-family:'Playfair Display',serif; font-size:1.75rem; font-weight:700; color:var(--wine-dark); text-decoration:none; font-style:italic; }
+    .mobile-menu a:hover { color:var(--wine-light); }
+    .mobile-menu-close { position:absolute; top:1.25rem; right:1.25rem; background:none; border:none; cursor:pointer; font-size:1.5rem; color:var(--muted); }
+    .mobile-lang { display:flex; gap:0; border:0.5px solid rgba(123,28,46,0.25); border-radius:2px; overflow:hidden; margin-top:1rem; }
+    .mobile-lang button { padding:0.5rem 1.25rem; font-family:'DM Mono',monospace; font-size:0.8rem; letter-spacing:0.1em; cursor:pointer; border:none; background:transparent; color:var(--muted); }
+    .mobile-lang button.active { background:var(--wine); color:var(--cream); }
+
+    /* ── RESPONSIVE — TABLET (≤900px) ────────────── */
+    @media (max-width: 900px) {
+      /* Nav */
+      .nav { padding:1rem 1.25rem; }
+      .nav-links { display:none; }
+      .hamburger { display:flex; }
+      .nav-cta { display:none; }
+
+      /* Hero */
+      .hero { grid-template-columns:1fr; min-height:auto; }
+      .hero-left { padding:3rem 1.25rem 2.5rem; border-right:none; border-bottom:0.5px solid var(--border); }
+      .hero-title { font-size:2.4rem; }
+      .hero-right { min-height:auto; padding:2.5rem 1.25rem; }
+      .scan-card { max-width:100%; }
+
+      /* Stats */
+      .stats-row { grid-template-columns:1fr 1fr; }
+      .stat { border-right:none; border-bottom:0.5px solid var(--border); }
+      .stat:last-child { border-bottom:none; grid-column:1/-1; }
+
+      /* Crawler */
+      .crawler-band { padding:3.5rem 1.25rem; }
+      .crawler-inner { grid-template-columns:1fr; gap:2.5rem; }
+      .crawler-title { font-size:1.75rem; }
+
+      /* Demo */
+      .demo-section { padding:3.5rem 1.25rem; }
+      .demo-inner { grid-template-columns:1fr; gap:2.5rem; }
+
+      /* How */
+      .how-section { padding:3.5rem 1.25rem; }
+      .how-grid { grid-template-columns:1fr; }
+
+      /* Story */
+      .story-section { padding:3.5rem 1.25rem; }
+      .story-inner { grid-template-columns:1fr; gap:2rem; }
+      .story-float-tag { display:none; }
+      .story-title { font-size:1.75rem; }
+
+      /* Waitlist */
+      .waitlist-section { padding:4rem 1.25rem; }
+      .waitlist-title { font-size:2rem; }
+      .waitlist-form { flex-direction:column; max-width:100%; }
+      .waitlist-input { border-right:0.5px solid rgba(201,168,76,0.3); border-bottom:none; border-radius:2px 2px 0 0; }
+      .waitlist-submit { border-radius:0 0 2px 2px; padding:0.9rem; }
+
+      /* Footer */
+      .footer { flex-direction:column; align-items:flex-start; gap:1.25rem; padding:1.5rem 1.25rem; }
+      .footer-right { flex-direction:column; align-items:flex-start; gap:0.75rem; }
+
+      /* Cookie banner */
+      #cookie-banner { padding:1.25rem; }
+      #cookie-banner > div { flex-direction:column; align-items:flex-start; }
+    }
+
+    /* ── RESPONSIVE — MOBILE (≤480px) ────────────── */
+    @media (max-width: 480px) {
+      .hero-title { font-size:2rem; }
+      .hero-sub { font-size:0.92rem; }
+      .hero-actions { flex-direction:column; }
+      .hero-actions a { text-align:center; }
+      .btn-primary, .btn-ghost { width:100%; text-align:center; }
+
+      .stats-row { grid-template-columns:1fr; }
+      .stat:last-child { grid-column:auto; }
+
+      .eyebrow { font-size:0.6rem; }
+      .crawler-stats { grid-template-columns:1fr 1fr; }
+
+      .wine-name-card { font-size:0.78rem; }
+      .wine-meta-card { font-size:0.58rem; }
+      .scan-card { padding:1.25rem; }
+
+      .waitlist-title { font-size:1.7rem; }
+
+      .result-row { padding:0.75rem 1rem; gap:0.5rem; }
+      .r-wine { font-size:0.8rem; }
+      .r-region { font-size:0.6rem; }
+      .score-circle { width:30px; height:30px; font-size:0.65rem; }
+
+      .how-step { padding:1.75rem 1.25rem; }
+      .story-para { font-size:0.88rem; }
+      .story-quote p { font-size:0.95rem; }
+
+      .crawler-title { font-size:1.5rem; }
+      .section-title { font-size:1.6rem; }
+      .page-title { font-size:1.85rem; }
+
+      #cookie-banner { padding:1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <a href="#" class="logo"><div class="logo-dot"></div>WineSteals</a>
+    <ul class="nav-links">
+      <li><a href="#how" data-key="nav1"></a></li>
+      <li><a href="#crawler" data-key="nav2"></a></li>
+      <li><a href="#story" data-key="nav4"></a></li>
+      <li><a href="#waitlist" data-key="nav3"></a></li>
+    </ul>
+    <div class="nav-right">
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" id="btn-nl" onclick="setLang('nl')">NL</button>
+      </div>
+      <a href="#waitlist" class="nav-cta" data-key="navCta"></a>
+      <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobile-menu">
+    <button class="mobile-menu-close" onclick="toggleMenu()">✕</button>
+    <a href="#how" data-key="nav1" onclick="toggleMenu()"></a>
+    <a href="#crawler" data-key="nav2" onclick="toggleMenu()"></a>
+    <a href="#story" data-key="nav4" onclick="toggleMenu()"></a>
+    <a href="#waitlist" data-key="nav3" onclick="toggleMenu()"></a>
+    <a href="#waitlist" class="btn-primary" data-key="navCta" onclick="toggleMenu()" style="font-family:'DM Sans',sans-serif;font-size:0.9rem;margin-top:0.5rem;"></a>
+    <div class="mobile-lang">
+      <button id="mbtn-en" class="active" onclick="setLang('en');toggleMenu()">EN</button>
+      <button id="mbtn-nl" onclick="setLang('nl');toggleMenu()">NL</button>
+    </div>
+  </div>
+
+  <!-- TICKER -->
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track" id="ticker-track"></div>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-left">
+      <div class="eyebrow fade-up d1" data-key="heroEyebrow"></div>
+      <h1 class="hero-title fade-up d2" data-key="heroTitle"></h1>
+      <p class="hero-sub fade-up d3" data-key="heroSub"></p>
+      <div class="hero-actions fade-up d4">
+        <a href="scan.html" class="btn-primary" data-key="heroCta1"></a>
+        <a href="#how" class="btn-ghost" data-key="heroCta2"></a>
+      </div>
+      <div class="hero-trust fade-up d4">
+        <div class="trust-item"><div class="trust-dot"></div><span data-key="trust1"></span></div>
+        <div class="trust-item"><div class="trust-dot"></div><span data-key="trust2"></span></div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="wine-bg-pattern"></div>
+      <div class="scan-card">
+        <div class="scan-header">
+          <span id="hero-scan-label"><span class="txt-en">WineSteals database</span><span class="txt-nl" style="display:none">WineSteals database</span></span>
+          <span><span class="pulse-dot"></span><span data-key="scanning"></span></span>
+        </div>
+        <div id="hero-wine-list">
+          <div style="padding:1.5rem;text-align:center;font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted,#6B5E52);"><span class="txt-en" style="display:none">Loading...</span><span class="txt-nl">Laden...</span></div>
+        </div>
+        <div class="scan-footer">
+          <span data-key="winesAnalysed"></span>
+          <span class="steals-count" id="hero-steals-count"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat"><div class="stat-num">3×</div><div class="stat-label" data-key="stat1"></div></div>
+    <div class="stat"><div class="stat-num">~12%</div><div class="stat-label" data-key="stat2"></div></div>
+    <div class="stat"><div class="stat-num">30s</div><div class="stat-label" data-key="stat3"></div></div>
+  </div>
+
+  <!-- CRAWLER -->
+  <section id="crawler" class="crawler-band">
+    <div class="crawler-inner">
+      <div>
+        <div class="crawler-eyebrow" data-key="crawlerEyebrow"></div>
+        <h2 class="crawler-title" data-key="crawlerTitle"></h2>
+        <p class="crawler-desc" data-key="crawlerDesc"></p>
+        <div class="crawler-stats">
+          <div class="crawler-stat"><div class="crawler-stat-num">240+</div><div class="crawler-stat-label" data-key="crawlerStat1"></div></div>
+          <div class="crawler-stat"><div class="crawler-stat-num" data-key="crawlerStat2num"></div><div class="crawler-stat-label" data-key="crawlerStat2"></div></div>
+          <div class="crawler-stat"><div class="crawler-stat-num">48h</div><div class="crawler-stat-label" data-key="crawlerStat3"></div></div>
+          <div class="crawler-stat"><div class="crawler-stat-num">AMS</div><div class="crawler-stat-label" data-key="crawlerStat4"></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="live-feed">
+          <div class="live-feed-header"><span class="pulse-dot"></span><span data-key="liveUpdates"></span></div>
+          <div id="live-feed-items">
+            <div style="padding:1rem 0;font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.08em;color:rgba(255,255,255,0.3);text-align:center;">
+              <span class="txt-nl">Scan een wijnkaart om hier te verschijnen</span><span class="txt-en" style="display:none">Scan a wine list to appear here</span>
+            </div>
+          </div>
+          <div class="feed-footer" data-key="lastUpdated"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEMO -->
+  <section class="demo-section">
+    <div class="demo-inner">
+      <div>
+        <div class="section-eyebrow" data-key="demoEyebrow"></div>
+        <h2 class="section-title" data-key="demoTitle"></h2>
+        <p class="section-sub" data-key="demoDesc"></p>
+        <ul class="feature-list">
+          <li class="feature-item"><div class="feature-icon">📷</div><div class="feature-text"><strong data-key="f1title"></strong><span data-key="f1desc"></span></div></li>
+          <li class="feature-item"><div class="feature-icon">🤖</div><div class="feature-text"><strong data-key="f2title"></strong><span data-key="f2desc"></span></div></li>
+          <li class="feature-item"><div class="feature-icon">⭐</div><div class="feature-text"><strong data-key="f3title"></strong><span data-key="f3desc"></span></div></li>
+          <li class="feature-item"><div class="feature-icon">📍</div><div class="feature-text"><strong data-key="f4title"></strong><span data-key="f4desc"></span></div></li>
+        </ul>
+        <a href="scan.html" class="btn-primary" style="margin-top:2rem;display:inline-block;" data-key="heroCta1"></a>
+      </div>
+      <div>
+        <div class="result-card">
+          <div class="result-header">
+            <div class="result-header-title" id="live-steals-title">Top steals uit de database</div>
+            <div class="result-header-meta" data-key="rankedBy"></div>
+          </div>
+          <div id="live-steals-list">
+            <!-- Wordt dynamisch gevuld vanuit Supabase -->
+            <div style="padding:2rem;text-align:center;font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted,#6B5E52);">Laden...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how" class="how-section">
+    <div class="section-eyebrow" data-key="howEyebrow"></div>
+    <h2 class="section-title" data-key="howTitle"></h2>
+    <div class="how-grid">
+      <div class="how-step">
+        <div class="step-num">01</div>
+        <div class="step-title" data-key="step1title"></div>
+        <p class="step-desc" data-key="step1desc"></p>
+        <span class="step-tag" data-key="step1tag"></span>
+      </div>
+      <div class="how-step">
+        <div class="step-num">02</div>
+        <div class="step-title" data-key="step2title"></div>
+        <p class="step-desc" data-key="step2desc"></p>
+        <span class="step-tag" data-key="step2tag"></span>
+      </div>
+      <div class="how-step">
+        <div class="step-num">03</div>
+        <div class="step-title" data-key="step3title"></div>
+        <p class="step-desc" data-key="step3desc"></p>
+        <span class="step-tag" data-key="step3tag"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- STORY -->
+  <section id="story" class="story-section">
+    <div class="story-inner">
+      <div class="story-left">
+        <div class="story-bottle">
+          <div class="story-float-tag" data-key="storyFloatTag"></div>
+          <div class="story-bottle-card">
+            <div class="story-bottle-label" data-key="storyBottleLabel"></div>
+            <div class="story-wine-name">Ceretto Barolo</div>
+            <div class="story-wine-producer">BAROLO DOCG · CERETTO · PIEDMONT</div>
+            <div class="story-price-compare">
+              <div class="story-price-box steal-box">
+                <div class="story-price-label" data-key="storyRestaurantPrice"></div>
+                <div class="story-price-val gold">€120</div>
+                <div class="story-price-sub">2016 vintage</div>
+              </div>
+              <div class="story-price-box">
+                <div class="story-price-label" data-key="storyRetailPrice"></div>
+                <div class="story-price-val">€180</div>
+                <div class="story-price-sub">2020 vintage</div>
+              </div>
+            </div>
+            <div class="story-saving">
+              <div class="story-saving-text" data-key="storySaving"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="story-right">
+        <div class="story-eyebrow" data-key="storyEyebrow"></div>
+        <h2 class="story-title" data-key="storyTitle"></h2>
+        <div class="story-body">
+          <p class="story-para" data-key="storyP1"></p>
+          <div class="story-quote"><p data-key="storyQuote"></p></div>
+          <p class="story-para" data-key="storyP2"></p>
+          <p class="story-para" data-key="storyP3"></p>
+        </div>
+        <div class="story-signature">
+          <div class="story-avatar">W</div>
+          <div>
+            <div class="story-sig-name" data-key="storySigName"></div>
+            <div class="story-sig-role" data-key="storySigRole"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WAITLIST -->
+  <section id="waitlist" class="waitlist-section">
+    <h2 class="waitlist-title" data-key="ctaTitle"></h2>
+    <p class="waitlist-sub" data-key="ctaSub"></p>
+    <form class="waitlist-form" onsubmit="handleSubmit(event)">
+      <input class="waitlist-input" type="email" id="email-input" data-placeholder-key="emailPlaceholder" required />
+      <button class="waitlist-submit" type="submit" data-key="ctaBtn"></button>
+    </form>
+    <div class="success-msg" id="success-msg" data-key="successMsg"></div>
+    <p class="waitlist-note" data-key="waitlistNote"></p>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-logo"><div class="logo-dot"></div>WineSteals</div>
+    <div class="footer-right">
+      <ul class="footer-links">
+        <li><a href="/cdn-cgi/l/email-protection#a2cac7cececde2d5cbccc7d1d6c7c3ced18cccce"><span class="__cf_email__" data-cfemail="5e363b3232311e2937303b2d2a3b3f322d703032">[email&#160;protected]</span></a></li>
+        <li><a href="privacy.html" data-key="footerPrivacy"></a></li>
+        <li><a href="cookies.html" data-key="footerCookies"></a></li>
+      </ul>
+      <div class="footer-copy" data-key="footerCopy"></div>
+    </div>
+  </footer>
+
+  <!-- COOKIE BANNER -->
+  <div id="cookie-banner" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:999; background:#fff; border-top:0.5px solid rgba(123,28,46,0.15); box-shadow:0 -4px 24px rgba(0,0,0,0.08); padding:1.25rem 2.5rem;">
+    <div style="max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:1.5rem; flex-wrap:wrap;">
+      <div style="flex:1; min-width:260px;">
+        <p style="font-family:'DM Sans',sans-serif; font-size:0.85rem; color:#6B5E52; font-weight:300; line-height:1.65;" id="cookie-text"></p>
+        <a href="cookies.html" id="cookie-link" style="font-family:'DM Mono',monospace; font-size:0.68rem; letter-spacing:0.08em; color:#7B1C2E; text-decoration:underline; margin-top:4px; display:inline-block;"></a>
+      </div>
+      <div style="display:flex; gap:0.75rem; flex-shrink:0;">
+        <button onclick="declineCookies()" id="cookie-decline" style="background:transparent; border:0.5px solid rgba(123,28,46,0.25); color:#6B5E52; padding:0.55rem 1.1rem; border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.82rem; cursor:pointer;"></button>
+        <button onclick="acceptCookies()" id="cookie-accept" style="background:#7B1C2E; border:none; color:#F8F4EE; padding:0.55rem 1.25rem; border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.82rem; font-weight:500; cursor:pointer;"></button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ── GLOBAL FUNCTIONS — must be outside DOMContentLoaded ── */
+
+    /* ── LANGUAGE ───────────────────────────────── */
+    function setLang(l) {
+      window._wsLang = l;
+      ['btn-en','btn-nl','mbtn-en','mbtn-nl'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('active', id.includes(l));
+      });
+      if (window._wsRender) window._wsRender(l);
+      // Dynamische content hertalen
+      if (typeof loadLiveSteals === 'function') loadLiveSteals();
+      // Feed placeholder tekst
+      document.querySelectorAll('.txt-nl').forEach(el => el.style.display = l === 'nl' ? '' : 'none');
+      document.querySelectorAll('.txt-en').forEach(el => el.style.display = l === 'en' ? '' : 'none');
+    }
+
+    /* ── HAMBURGER ──────────────────────────────── */
+    function toggleMenu() {
+      const menu = document.getElementById('mobile-menu');
+      const burger = document.getElementById('hamburger');
+      if (!menu || !burger) return;
+      menu.classList.toggle('open');
+      burger.classList.toggle('open');
+      document.body.style.overflow = menu.classList.contains('open') ? 'hidden' : '';
+    }
+
+    /* ── WAITLIST FORM ──────────────────────────── */
+    function handleSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('email-input').value;
+      const form = document.querySelector('.waitlist-form');
+      const msg = document.getElementById('success-msg');
+      form.style.display = 'none';
+      msg.style.display = 'block';
+      console.log('Waitlist signup:', email);
+    }
+
+    /* ── COOKIE BANNER ──────────────────────────── */
+    function acceptCookies() {
+      localStorage.setItem('ws_cookie_consent', 'all');
+      localStorage.setItem('ws_cookie_date', new Date().toISOString());
+      document.getElementById('cookie-banner').style.display = 'none';
+    }
+
+    function declineCookies() {
+      localStorage.setItem('ws_cookie_consent', 'functional');
+      localStorage.setItem('ws_cookie_date', new Date().toISOString());
+      document.getElementById('cookie-banner').style.display = 'none';
+    }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    /* ── COPY ─────────────────────────────────────── */
+    const copy = {
+      en: {
+        nav1: 'How it works',
+        nav2: 'Live steals',
+        nav3: 'Waitlist',
+        nav4: 'Our story',
+        navCta: 'Get early access ↗',
+        heroEyebrow: 'Wine intelligence · Amsterdam',
+        heroTitle: 'Find the <em>hidden gems</em> on any wine list',
+        heroSub: 'Upload a restaurant wine list and we\'ll instantly surface the bottles that are sharply priced — where the restaurant charges less than market rate.',
+        heroCta1: 'Try the scanner ↗',
+        heroCta2: 'How it works',
+        trust1: 'Starting in Amsterdam',
+        trust2: 'Free early access',
+        scanning: 'Scanning',
+        stealBadge: 'Steal',
+        winesAnalysed: '18 wines analysed',
+        stealsFound: '2 steals found',
+        stat1: 'Average restaurant markup on wine',
+        stat2: 'Of wines on any list are genuinely sharp',
+        stat3: 'To scan a full wine list',
+        crawlerEyebrow: 'AI-powered crawler',
+        crawlerTitle: 'We <em>hunt steals</em> before you even sit down',
+        crawlerDesc: 'Our AI crawler actively monitors Amsterdam restaurant wine lists — scanning menus, detecting updates, and scoring every bottle daily. Get an alert the moment a steal appears.',
+        crawlerStat1: 'Amsterdam restaurants tracked',
+        crawlerStat2num: 'Daily',
+        crawlerStat2: 'Scan frequency',
+        crawlerStat3: 'Alert turnaround',
+        crawlerStat4: 'Starting city',
+        liveUpdates: 'Live updates',
+        lastUpdated: 'Last scan: 4 minutes ago',
+        demoEyebrow: 'What you get',
+        demoTitle: 'Sharp prices, spotted instantly',
+        demoDesc: 'Every bottle is cross-referenced against real-world retail and market prices, then scored for value. You get a ranked list of which bottles to order.',
+        f1title: 'Photo or PDF upload',
+        f1desc: 'Snap the wine list at the table, or upload a PDF menu beforehand',
+        f2title: 'AI crawler — always on',
+        f2desc: 'Our crawler monitors 240+ Amsterdam restaurants and pushes alerts when steals appear',
+        f3title: 'Steal score 0–100',
+        f3desc: 'A simple score showing how sharp the restaurant\'s price is versus the market',
+        f4title: 'Save by restaurant',
+        f4desc: 'Build your personal map of restaurants with the best-value wine lists',
+        rankedBy: 'Ranked by steal score',
+        market: 'market',
+        howEyebrow: 'How it works',
+        howTitle: 'Three steps to your next great bottle',
+        step1title: 'Scan or upload the wine list',
+        step1desc: 'Take a photo at the table, share a PDF menu, or let our crawler do it automatically for restaurants we already track.',
+        step1tag: 'Photo · PDF · Auto',
+        step2title: 'We price every bottle',
+        step2desc: 'Our engine matches each wine against market prices across retailers, auctions and wholesale data — accounting for vintage and format.',
+        step2tag: 'Wine-Searcher · Vivino',
+        step3title: 'Order the steal',
+        step3desc: 'Get a ranked list of the sharpest prices on the list. Filter by colour, region or budget. Order with total confidence.',
+        step3tag: 'Instant results',
+        ctaTitle: 'Never overpay for <em>wine</em> again',
+        ctaSub: 'Join the waitlist for early access — launching in Amsterdam',
+        emailPlaceholder: 'your@email.com',
+        ctaBtn: 'Join waitlist',
+        successMsg: '✓ You\'re on the list — we\'ll be in touch',
+        waitlistNote: 'No spam. No nonsense. Just great wine value.',
+        footerPrivacy: 'Privacy',
+        footerCopy: '© 2026 WineSteals.nl',
+        storyEyebrow: 'Our story',
+        storyTitle: 'A <em>personal passion</em> became a platform',
+        storyP1: 'My father and I have always loved discovering great wines while dining out. For years, we spent evenings manually going through restaurant wine lists, page by page, looking for the hidden deals that most people walk right past.',
+        storyQuote: 'What if there was a platform that could uncover these hidden wine steals automatically?',
+        storyP2: 'One evening, we found a Ceretto Barolo 2016 on a restaurant wine list for €120 — while a newer 2020 vintage was selling in retail stores for €180. An older, better vintage, at a fraction of what you\'d expect to pay. That moment sparked everything.',
+        storyP3: 'WineSteals is built for everyone who loves wine but hates overpaying for it. It\'s the tool my father and I always wished existed.',
+        storyFloatTag: 'The bottle that started it all',
+        storyBottleLabel: 'The steal that sparked WineSteals',
+        storyRestaurantPrice: 'Restaurant price',
+        storyRetailPrice: 'Retail price',
+        storySaving: '€60 cheaper · older & better vintage',
+        storySigName: 'Founder, WineSteals',
+        storySigRole: 'Amsterdam · 2026',
+        nav4: 'Our story',
+        footerPrivacy: 'Privacy',
+        footerCookies: 'Cookie policy',
+        footerCopy: '© 2026 WineSteals.nl',
+        cookieBannerText: 'We use cookies to improve your experience and to show relevant ads. By clicking "Accept", you agree to our use of all cookies.',
+        cookieBannerLink: 'Read our cookie policy',
+        cookieAccept: 'Accept all',
+        cookieDecline: 'Functional only',
+      },
+      nl: {
+        nav1: 'Hoe het werkt',
+        nav2: 'Live steals',
+        nav3: 'Wachtlijst',
+        navCta: 'Vroege toegang ↗',
+        heroEyebrow: 'Wijn-intelligentie · Amsterdam',
+        heroTitle: 'Ontdek de <em>verborgen parels</em> op elke wijnkaart',
+        heroSub: 'Upload een wijnkaart van een restaurant en we laten je direct zien welke flessen scherp geprijsd zijn — waar het restaurant minder vraagt dan de marktprijs.',
+        heroCta1: 'Probeer de scanner ↗',
+        heroCta2: 'Hoe het werkt',
+        trust1: 'Start in Amsterdam',
+        trust2: 'Gratis vroege toegang',
+        scanning: 'Scannen',
+        stealBadge: 'Steal',
+        winesAnalysed: '18 wijnen geanalyseerd',
+        stealsFound: '2 steals gevonden',
+        stat1: 'Gemiddelde restaurantopslag op wijn',
+        stat2: 'Van de wijnen is echt scherp geprijsd',
+        stat3: 'Om een volledige wijnkaart te scannen',
+        crawlerEyebrow: 'AI-gestuurde crawler',
+        crawlerTitle: 'Wij <em>jagen op steals</em> nog voor jij zit',
+        crawlerDesc: 'Onze AI-crawler monitort actief de wijnkaarten van Amsterdamse restaurants — scant menu\'s, detecteert updates en scoort elke fles dagelijks. Je krijgt een melding zodra er een steal verschijnt.',
+        crawlerStat1: 'Amsterdamse restaurants gevolgd',
+        crawlerStat2num: 'Dagelijks',
+        crawlerStat2: 'Scanfrequentie',
+        crawlerStat3: 'Meldingstijd',
+        crawlerStat4: 'Startstad',
+        liveUpdates: 'Live updates',
+        lastUpdated: 'Laatste scan: 4 minuten geleden',
+        demoEyebrow: 'Wat je krijgt',
+        demoTitle: 'Scherpe prijzen, direct zichtbaar',
+        demoDesc: 'Elke fles wordt vergeleken met echte marktprijzen bij retailers en grossiers, en daarna gescoord op waarde. Je krijgt een gerangschikte lijst van de beste flessen.',
+        f1title: 'Foto of PDF uploaden',
+        f1desc: 'Maak een foto van de wijnkaart aan tafel, of upload van tevoren een PDF-menu',
+        f2title: 'AI-crawler — altijd actief',
+        f2desc: 'Onze crawler monitort 240+ Amsterdamse restaurants en stuurt een melding als steals verschijnen',
+        f3title: 'Steal score 0–100',
+        f3desc: 'Een eenvoudige score die laat zien hoe scherp de restaurantprijs is ten opzichte van de markt',
+        f4title: 'Opslaan per restaurant',
+        f4desc: 'Bouw je persoonlijke kaart van restaurants met de beste wijnkaarten',
+        rankedBy: 'Gerangschikt op steal score',
+        market: 'markt',
+        howEyebrow: 'Hoe het werkt',
+        howTitle: 'Drie stappen naar je volgende geweldige fles',
+        step1title: 'Scan of upload de wijnkaart',
+        step1desc: 'Maak een foto aan tafel, stuur een PDF-menu door, of laat onze crawler het automatisch doen voor restaurants die we al volgen.',
+        step1tag: 'Foto · PDF · Automatisch',
+        step2title: 'Wij prijzen elke fles',
+        step2desc: 'Ons systeem vergelijkt elke wijn met marktprijzen bij retailers, veilingen en groothandels — rekening houdend met vintage en formaat.',
+        step2tag: 'Wine-Searcher · Vivino',
+        step3title: 'Bestel de steal',
+        step3desc: 'Ontvang een gerangschikte lijst van de scherpste prijzen. Filter op kleur, regio of budget. Bestel met vertrouwen.',
+        step3tag: 'Directe resultaten',
+        ctaTitle: 'Nooit meer teveel betalen voor <em>wijn</em>',
+        ctaSub: 'Meld je aan voor vroege toegang — we starten in Amsterdam',
+        emailPlaceholder: 'jouw@email.nl',
+        ctaBtn: 'Aanmelden',
+        successMsg: '✓ Je staat op de lijst — we nemen snel contact op',
+        waitlistNote: 'Geen spam. Geen onzin. Gewoon geweldige wijnwaarde.',
+        footerPrivacy: 'Privacy',
+        footerCopy: '© 2026 WineSteals.nl',
+        storyEyebrow: 'Ons verhaal',
+        storyTitle: 'Een <em>persoonlijke passie</em> werd een platform',
+        storyP1: 'Mijn vader en ik zijn altijd al dol geweest op het ontdekken van geweldige wijnen tijdens het uit eten gaan. Jarenlang doorzochten we wijnkaarten van restaurants, pagina na pagina, op zoek naar de verborgen deals die de meeste mensen gewoon voorbij lopen.',
+        storyQuote: 'Wat als er een platform was dat deze verborgen wine steals automatisch kon opsporen?',
+        storyP2: 'Op een avond vonden we een Ceretto Barolo 2016 op een restaurantwijnkaart voor €120 — terwijl een nieuwer 2020 vintage in de winkel voor €180 werd verkocht. Een ouder, beter vintage, voor een fractie van wat je zou verwachten te betalen. Dat moment was de vonk voor alles.',
+        storyP3: 'WineSteals is gebouwd voor iedereen die van wijn houdt maar er niet voor wil overbetalen. Het is het hulpmiddel dat mijn vader en ik altijd al hadden gewild.',
+        storyFloatTag: 'De fles die alles begon',
+        storyBottleLabel: 'De steal die WineSteals inspireerde',
+        storyRestaurantPrice: 'Restaurantprijs',
+        storyRetailPrice: 'Winkelprijs',
+        storySaving: '€60 goedkoper · ouder & beter vintage',
+        storySigName: 'Oprichter, WineSteals',
+        storySigRole: 'Amsterdam · 2026',
+        nav4: 'Ons verhaal',
+        footerPrivacy: 'Privacy',
+        footerCookies: 'Cookiebeleid',
+        footerCopy: '© 2026 WineSteals.nl',
+        cookieBannerText: 'We gebruiken cookies om je ervaring te verbeteren en relevante advertenties te tonen. Door op "Accepteren" te klikken, ga je akkoord met het gebruik van alle cookies.',
+        cookieBannerLink: 'Lees ons cookiebeleid',
+        cookieAccept: 'Alles accepteren',
+        cookieDecline: 'Alleen functioneel',
+      }
+    };
+
+    /* ── TICKER DATA ──────────────────────────────── */
+    // Ticker wordt gevuld zodra er echte scan data beschikbaar is
+    // TODO: laden vanuit Supabase scan resultaten
+    const tickerItems = [];
+
+    /* ── STATE ────────────────────────────────────── */
+    let lang = window._wsLang || 'en';
+
+    /* ── RENDER ───────────────────────────────────── */
+    function render(newLang) {
+      if (newLang) lang = newLang;
+      const t = copy[lang];
+
+      document.querySelectorAll('[data-key]').forEach(el => {
+        const key = el.getAttribute('data-key');
+        if (!t[key] && t[key] !== '') return;
+        if (t[key].includes('<em>')) {
+          el.innerHTML = t[key];
+        } else {
+          el.textContent = t[key];
+        }
+      });
+
+      // placeholders
+      document.querySelectorAll('[data-placeholder-key]').forEach(el => {
+        const key = el.getAttribute('data-placeholder-key');
+        if (t[key]) el.placeholder = t[key];
+      });
+
+      // sync lang buttons
+      ['btn-en','btn-nl','mbtn-en','mbtn-nl'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('active', id.includes(lang));
+      });
+
+      document.documentElement.lang = lang;
+
+      // also update cookie banner text
+      if (typeof renderCookieBanner === 'function') renderCookieBanner();
+    }
+
+    // Expose render globally so setLang can call it
+    window._wsRender = render;
+
+    /* ── TICKER ───────────────────────────────────── */
+    function buildTicker() {
+      const track = document.getElementById('ticker-track');
+      const double = [...tickerItems, ...tickerItems];
+      track.innerHTML = double.map(item =>
+        `<span class="ticker-item">${item}</span>`
+      ).join('');
+    }
+
+    /* ── HAMBURGER / FORM / COOKIES ───────────────── */
+    // All moved to global scope above
+
+    /* ── COOKIE RENDER/SHOW ───────────────────────── */
+    function renderCookieBanner() {
+      const t = copy[lang];
+      const ct = document.getElementById('cookie-text');
+      const cl = document.getElementById('cookie-link');
+      const ca = document.getElementById('cookie-accept');
+      const cd = document.getElementById('cookie-decline');
+      if (ct) ct.textContent = t.cookieBannerText;
+      if (cl) cl.textContent = t.cookieBannerLink;
+      if (ca) ca.textContent = t.cookieAccept;
+      if (cd) cd.textContent = t.cookieDecline;
+    }
+
+    function showCookieBanner() {
+      const consent = localStorage.getItem('ws_cookie_consent');
+      if (!consent) document.getElementById('cookie-banner').style.display = 'block';
+    }
+
+    /* ── INIT ─────────────────────────────────────── */
+    buildTicker();
+    render();
+    renderCookieBanner();
+    showCookieBanner();
+    loadLiveSteals();
+
+    // Initialiseer taal spans op basis van huidige taal
+    document.querySelectorAll('.txt-nl').forEach(el => el.style.display = lang === 'nl' ? '' : 'none');
+    document.querySelectorAll('.txt-en').forEach(el => el.style.display = lang === 'en' ? '' : 'none');
+
+  }); // end DOMContentLoaded
+
+  /* ── LIVE STEALS VANUIT SUPABASE ── */
+  async function loadLiveSteals() {
+    const SB_URL = 'https://kdhczlabjecqxlyuxprl.supabase.co';
+    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
+    const isNL = (window._wsLang || lang || 'en') === 'nl';
+
+    try {
+      const res = await fetch(
+        `${SB_URL}/rest/v1/wines?price_source=neq.pending&market_price_eur=not.is.null&select=name,producer,vintage,region,country,colour,market_price_eur&order=market_price_eur.desc&limit=50`,
+        { headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` } }
+      );
+      const wines = await res.json();
+      const selection = wines.filter(w => w.market_price_eur >= 30 && w.market_price_eur <= 300).slice(0, 5);
+
+      // Update demo sectie header
+      const title = document.getElementById('live-steals-title');
+      if (title) title.textContent = isNL ? 'Wijnen om naar te zoeken' : 'Wines worth scanning for';
+
+      // Vul demo sectie
+      renderLiveSteals(selection, isNL);
+
+      // Vul hero scan card met andere selectie
+      renderHeroCard(wines.filter(w => w.market_price_eur >= 20).slice(0, 4), isNL);
+
+    } catch(e) {
+      document.getElementById('live-steals-list').innerHTML =
+        `<div style="padding:2rem;text-align:center;font-size:0.82rem;color:var(--muted,#6B5E52);">
+          ${isNL ? 'Scan een wijnkaart om steals te ontdekken' : 'Scan a wine list to discover steals'} →
+        </div>`;
+      document.getElementById('hero-wine-list').innerHTML =
+        `<div style="padding:1.5rem;text-align:center;font-size:0.75rem;color:var(--muted);">—</div>`;
+    }
+  }
+
+  function renderHeroCard(wines, isNL) {
+    const list = document.getElementById('hero-wine-list');
+    if (!list || !wines.length) return;
+    list.innerHTML = wines.map(w => `
+      <div class="wine-item">
+        <div>
+          <div class="wine-name-card">${w.name}</div>
+          <div class="wine-meta-card">${[w.producer, w.vintage].filter(Boolean).join(' · ')}</div>
+        </div>
+        <div class="wine-right">
+          <div class="wine-price">${isNL ? 'markt' : 'market'} ~€${w.market_price_eur}</div>
+          <div class="score-bar"><div class="score-fill" style="width:${Math.min(90, Math.round(w.market_price_eur / 3))}%"></div></div>
+        </div>
+      </div>
+    `).join('');
+    const count = document.getElementById('hero-steals-count');
+    if (count) count.textContent = `${wines.length} ${isNL ? 'wijnen in database' : 'wines in database'}`;
+  }
+
+  function renderLiveSteals(wines, isNL) {
+    const list = document.getElementById('live-steals-list');
+
+    if (!wines.length) {
+      list.innerHTML = `<div style="padding:1.5rem;text-align:center;font-size:0.82rem;color:var(--muted,#6B5E52);">
+        ${isNL ? 'Nog geen data beschikbaar.' : 'No data available yet.'}
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = wines.map(w => {
+      const regionStr = [w.producer, w.vintage, w.region]
+        .filter(Boolean).join(' · ').toUpperCase();
+
+      return `
+        <div class="result-row">
+          <div class="steal-bar none"></div>
+          <div class="r-name">
+            <div class="r-wine">${w.name}</div>
+            <div class="r-region">${regionStr}</div>
+          </div>
+          <div class="r-prices">
+            <div class="r-market" style="font-size:0.75rem;">${isNL ? 'marktwaarde' : 'market value'} ~€${w.market_price_eur}</div>
+          </div>
+          <div class="score-circle" style="background:var(--cream);color:var(--muted);border:1px solid var(--border);">?</div>
+        </div>
+      `;
+    }).join('') + `
+      <div style="padding:1rem 1.25rem;border-top:0.5px solid var(--border);font-size:0.75rem;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:0.05em;">
+        ${isNL
+          ? '🔍 Scan een wijnkaart om echte steal scores te zien'
+          : '🔍 Scan a wine list to see real steal scores'}
+      </div>
+    `;
+  }
+  </script>
+</body>
+</html>

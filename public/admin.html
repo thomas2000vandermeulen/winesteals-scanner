@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WineSteals Admin — Database beheer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --wine: #7B1C2E; --wine-dark: #4A0F1C; --gold: #C9A84C;
+      --cream: #F8F4EE; --ink: #1A1208; --muted: #6B5E52;
+      --border: rgba(123,28,46,0.12); --green: #2E7D32;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
+
+    /* ── LOGIN SCHERM ── */
+    .login-overlay {
+      position: fixed; inset: 0; background: var(--wine-dark); z-index: 999;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-overlay::before {
+      content: ''; position: absolute; inset: 0; opacity: 0.04;
+      background-image: repeating-linear-gradient(45deg, var(--gold) 0px, var(--gold) 1px, transparent 1px, transparent 40px);
+    }
+    .login-box {
+      background: rgba(255,255,255,0.06); border: 0.5px solid rgba(201,168,76,0.3);
+      border-radius: 3px; padding: 2.5rem 2.25rem; width: 100%; max-width: 360px;
+      position: relative; z-index: 1;
+    }
+    .login-logo { font-family:'Playfair Display',serif; font-size:1.25rem; font-weight:700; color:var(--gold); display:flex; align-items:center; gap:7px; margin-bottom:1.75rem; }
+    .login-logo-dot { width:6px; height:6px; background:var(--gold); border-radius:50%; }
+    .login-title { font-family:'Playfair Display',serif; font-size:1.4rem; font-style:italic; color:#F8F4EE; margin-bottom:0.4rem; }
+    .login-sub { font-size:0.82rem; color:rgba(248,244,238,0.45); font-weight:300; margin-bottom:1.75rem; }
+    .login-label { font-family:'DM Mono',monospace; font-size:0.62rem; letter-spacing:0.12em; text-transform:uppercase; color:rgba(201,168,76,0.7); display:block; margin-bottom:0.4rem; }
+    .login-input {
+      width:100%; padding:0.8rem 1rem; background:rgba(255,255,255,0.08);
+      border:0.5px solid rgba(201,168,76,0.3); border-radius:2px;
+      font-family:'DM Sans',sans-serif; font-size:0.9rem; color:#F8F4EE;
+      outline:none; margin-bottom:1rem; transition:border-color 0.2s;
+    }
+    .login-input:focus { border-color:rgba(201,168,76,0.6); }
+    .login-input::placeholder { color:rgba(248,244,238,0.25); }
+    .login-btn {
+      width:100%; background:var(--gold); color:var(--wine-dark); border:none;
+      padding:0.85rem; border-radius:2px; font-family:'DM Sans',sans-serif;
+      font-size:0.9rem; font-weight:500; cursor:pointer; transition:background 0.2s;
+    }
+    .login-btn:hover { background:var(--gold-light, #E8C97A); }
+    .login-error { font-size:0.8rem; color:#F09595; margin-top:0.75rem; display:none; font-weight:300; text-align:center; }
+    .login-overlay.hidden { display:none; }
+
+    .nav { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; border-bottom:0.5px solid var(--border); background:white; }
+    .logo { font-family:'Playfair Display',serif; font-size:1.2rem; font-weight:700; color:var(--wine-dark); display:flex; align-items:center; gap:7px; text-decoration:none; }
+    .logo-dot { width:6px; height:6px; background:var(--gold); border-radius:50%; }
+    .nav-badge { font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; background:rgba(123,28,46,0.1); color:var(--wine); padding:3px 10px; border-radius:1px; }
+
+    .main { max-width:1000px; margin:0 auto; padding:2.5rem 2rem; }
+
+    /* STATS BAR */
+    .stats-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border:0.5px solid var(--border); border-radius:2px; margin-bottom:2.5rem; overflow:hidden; }
+    .stat-box { background:white; padding:1.1rem 1.25rem; }
+    .stat-num { font-family:'Playfair Display',serif; font-size:1.75rem; font-weight:700; color:var(--wine); line-height:1; margin-bottom:0.2rem; }
+    .stat-num.green { color:var(--green); }
+    .stat-label { font-size:0.75rem; color:var(--muted); font-weight:300; }
+
+    /* CALL TRACKER */
+    .call-tracker { background:var(--wine-dark); border-radius:3px; padding:1.25rem 1.5rem; margin-bottom:2rem; display:flex; align-items:center; justify-content:space-between; }
+    .call-info { font-family:'DM Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:rgba(248,244,238,0.6); }
+    .call-num { font-family:'Playfair Display',serif; font-size:1.5rem; font-weight:700; color:var(--gold); }
+    .call-bar-wrap { flex:1; margin:0 1.5rem; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden; }
+    .call-bar-fill { height:100%; background:var(--gold); border-radius:2px; transition:width 0.3s; }
+    .call-reset { font-family:'DM Mono',monospace; font-size:0.62rem; color:rgba(248,244,238,0.35); letter-spacing:0.08em; }
+
+    /* SECTION */
+    .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+    .section-title { font-family:'Playfair Display',serif; font-size:1.25rem; font-weight:700; color:var(--wine-dark); }
+    .section-eyebrow { font-family:'DM Mono',monospace; font-size:0.62rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--gold); margin-bottom:0.4rem; }
+
+    /* ADD WINE FORM */
+    .add-form { background:white; border:0.5px solid var(--border); border-radius:3px; overflow:hidden; margin-bottom:2.5rem; }
+    .add-form-header { background:var(--wine-dark); padding:1rem 1.5rem; font-family:'Playfair Display',serif; font-size:0.95rem; font-style:italic; color:rgba(255,255,255,0.9); }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; padding:1.5rem; }
+    .form-grid.wide { grid-template-columns:1fr 1fr; }
+    .form-group { display:flex; flex-direction:column; gap:0.35rem; }
+    .form-label { font-family:'DM Mono',monospace; font-size:0.62rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
+    .form-input { padding:0.65rem 0.85rem; background:var(--cream); border:0.5px solid var(--border); border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.88rem; color:var(--ink); outline:none; transition:border-color 0.2s; }
+    .form-input:focus { border-color:var(--wine-light, #A8324A); background:white; }
+    select.form-input { cursor:pointer; }
+    .form-actions { padding:1rem 1.5rem; border-top:0.5px solid var(--border); display:flex; gap:0.75rem; align-items:center; background:rgba(123,28,46,0.02); }
+    .btn-save { background:var(--wine); color:#F8F4EE; border:none; padding:0.65rem 1.75rem; border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.88rem; font-weight:500; cursor:pointer; transition:background 0.2s; }
+    .btn-save:hover { background:var(--wine-dark); }
+    .btn-save:disabled { opacity:0.5; cursor:not-allowed; }
+    .btn-lookup { background:transparent; color:var(--wine); border:0.5px solid var(--wine); padding:0.65rem 1.25rem; border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.88rem; cursor:pointer; transition:all 0.2s; text-decoration:none; display:inline-flex; align-items:center; gap:0.5rem; }
+    .btn-lookup:hover { background:var(--wine); color:#F8F4EE; }
+    .save-feedback { font-family:'DM Mono',monospace; font-size:0.72rem; letter-spacing:0.08em; color:var(--green); display:none; }
+
+    /* WINE TABLE */
+    .wine-table { background:white; border:0.5px solid var(--border); border-radius:3px; overflow:hidden; }
+    .table-header { display:grid; grid-template-columns:2fr 1fr 1fr 0.7fr 0.7fr 0.7fr 80px; gap:0; background:var(--wine-dark); padding:0.75rem 1.25rem; }
+    .th { font-family:'DM Mono',monospace; font-size:0.6rem; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.5); }
+    .table-row { display:grid; grid-template-columns:2fr 1fr 1fr 0.7fr 0.7fr 0.7fr 80px; gap:0; padding:0.85rem 1.25rem; border-bottom:0.5px solid var(--border); align-items:center; transition:background 0.15s; }
+    .table-row:last-child { border-bottom:none; }
+    .table-row:hover { background:rgba(123,28,46,0.02); }
+    .td { font-size:0.82rem; color:var(--ink); }
+    .td.muted { color:var(--muted); font-size:0.75rem; }
+    .td.wine-name { font-family:'Playfair Display',serif; font-style:italic; }
+    .td.price { font-family:'DM Mono',monospace; font-size:0.78rem; }
+    .colour-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:5px; }
+    .colour-red { background:#7B1C2E; }
+    .colour-white { background:#C9A84C; }
+    .colour-sparkling { background:#4A90D9; }
+    .colour-rosé { background:#E8A0A0; }
+    .colour-dessert { background:#8B5E3C; }
+    .btn-delete { font-family:'DM Mono',monospace; font-size:0.6rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); background:transparent; border:0.5px solid var(--border); padding:3px 8px; border-radius:1px; cursor:pointer; transition:all 0.2s; }
+    .btn-delete:hover { border-color:var(--wine); color:var(--wine); }
+
+    /* SEARCH */
+    .search-row { display:flex; gap:0.75rem; margin-bottom:1.25rem; align-items:center; }
+    .search-input { flex:1; padding:0.65rem 1rem; background:white; border:0.5px solid var(--border); border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.88rem; color:var(--ink); outline:none; }
+    .search-input:focus { border-color:var(--wine); }
+    .filter-select { padding:0.65rem 1rem; background:white; border:0.5px solid var(--border); border-radius:2px; font-family:'DM Mono',monospace; font-size:0.72rem; color:var(--muted); outline:none; cursor:pointer; }
+
+    .loading { text-align:center; padding:3rem; font-family:'DM Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
+    .empty { text-align:center; padding:2rem; font-size:0.88rem; color:var(--muted); font-weight:300; }
+
+    /* PENDING KAARTJES */
+    .pending-card { background:white; border:0.5px solid var(--border); border-left:3px solid var(--gold); border-radius:3px; padding:1.1rem 1.25rem; margin-bottom:0.75rem; display:grid; grid-template-columns:1fr auto; gap:1rem; align-items:center; }
+    .pending-wine-name { font-family:'Playfair Display',serif; font-style:italic; font-size:0.95rem; color:var(--ink); margin-bottom:0.25rem; }
+    .pending-meta { font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.08em; color:var(--muted); }
+    .pending-actions { display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+    .pending-price-input { width:90px; padding:0.5rem 0.75rem; background:var(--cream); border:0.5px solid var(--border); border-radius:2px; font-family:'DM Mono',monospace; font-size:0.82rem; color:var(--ink); outline:none; text-align:center; }
+    .pending-price-input:focus { border-color:var(--wine); background:white; }
+    .btn-approve { background:var(--green); color:white; border:none; padding:0.5rem 1rem; border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.82rem; font-weight:500; cursor:pointer; white-space:nowrap; }
+    .btn-approve:hover { background:#1B5E20; }
+    .btn-approve:disabled { opacity:0.5; cursor:not-allowed; }
+    .btn-ws-small { background:transparent; color:var(--wine); border:0.5px solid var(--border); padding:0.5rem 0.75rem; border-radius:2px; font-family:'DM Mono',monospace; font-size:0.62rem; letter-spacing:0.08em; cursor:pointer; text-decoration:none; white-space:nowrap; }
+    .btn-ws-small:hover { border-color:var(--wine); }
+    .btn-dismiss { background:transparent; color:var(--muted); border:none; font-size:1rem; cursor:pointer; padding:0.25rem; line-height:1; }
+    .pending-seen { font-family:'DM Mono',monospace; font-size:0.6rem; letter-spacing:0.06em; color:var(--gold); background:rgba(201,168,76,0.1); padding:2px 7px; border-radius:1px; margin-left:6px; }
+
+    @media (max-width:700px) {
+      .stats-bar { grid-template-columns:1fr 1fr; }
+      .form-grid { grid-template-columns:1fr; }
+      .table-header, .table-row { grid-template-columns:1fr 1fr 60px; }
+      .th:not(:first-child):not(:last-child):not(:nth-child(2)) { display:none; }
+      .td:not(:first-child):not(:last-child):not(:nth-child(2)) { display:none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN SCHERM -->
+  <div class="login-overlay" id="login-overlay">
+    <div class="login-box">
+      <div class="login-logo"><div class="login-logo-dot"></div>WineSteals</div>
+      <div class="login-title">Admin toegang</div>
+      <div class="login-sub">Alleen voor beheerders van de wijnendatabase</div>
+      <label class="login-label" for="login-pw">Wachtwoord</label>
+      <input class="login-input" type="password" id="login-pw" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter') checkPassword()" autofocus />
+      <button class="login-btn" onclick="checkPassword()">Inloggen</button>
+      <div class="login-error" id="login-error">Ongeldig wachtwoord. Probeer opnieuw.</div>
+    </div>
+  </div>
+
+<nav class="nav">
+  <a href="index.html" class="logo"><div class="logo-dot"></div>WineSteals</a>
+  <span class="nav-badge">Admin — Database beheer</span>
+</nav>
+
+<div class="main">
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-box"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Wijnen in database</div></div>
+    <div class="stat-box"><div class="stat-num" id="stat-red">—</div><div class="stat-label">Rood</div></div>
+    <div class="stat-box"><div class="stat-num" id="stat-white">—</div><div class="stat-label">Wit</div></div>
+    <div class="stat-box"><div class="stat-num green" id="stat-today">0</div><div class="stat-label">Vandaag toegevoegd</div></div>
+  </div>
+
+  <!-- TO DO — PENDING WIJNEN -->
+  <div id="pending-section" style="display:none; margin-bottom:2.5rem;">
+    <div class="section-eyebrow" style="margin-bottom:0.75rem;">⚠️ Te doen — prijzen ontbreken</div>
+    <div class="section-header" style="margin-bottom:1rem;">
+      <div class="section-title">Wijnen gevonden bij scan maar nog zonder marktprijs</div>
+      <span id="pending-count" style="font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:0.1em;color:var(--gold);background:var(--wine-dark);padding:4px 12px;border-radius:2px;">0 te doen</span>
+    </div>
+    <div id="pending-list"></div>
+  </div>
+
+  <!-- WINE-SEARCHER CALL TRACKER -->
+  <div class="call-tracker">
+    <div>
+      <div class="call-info">Wine-Searcher API calls vandaag</div>
+      <div class="call-num" id="calls-used">0 / 100</div>
+    </div>
+    <div class="call-bar-wrap">
+      <div class="call-bar-fill" id="call-bar" style="width:0%"></div>
+    </div>
+    <div class="call-reset">Reset om middernacht</div>
+  </div>
+
+  <!-- WIJN TOEVOEGEN -->
+  <div class="section-eyebrow">Wijn toevoegen</div>
+  <div class="section-header" style="margin-bottom:0.75rem;">
+    <div class="section-title">Nieuwe wijn toevoegen aan database</div>
+    <a class="btn-lookup" id="ws-lookup-btn" href="#" target="_blank" onclick="openWineSearcher()">
+      🔍 Opzoeken op Wine-Searcher
+    </a>
+  </div>
+
+  <div class="add-form">
+    <div class="add-form-header">Vul de wijngegevens in — prijzen kun je opzoeken via Wine-Searcher (link hierboven)</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Wijn naam *</label>
+        <input class="form-input" id="f-name" placeholder="bijv. Gevrey-Chambertin 1er Cru" oninput="updateWSLink()" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Producent *</label>
+        <input class="form-input" id="f-producer" placeholder="bijv. Rossignol-Trapet" oninput="updateWSLink()" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Jaargang</label>
+        <input class="form-input" id="f-vintage" type="number" placeholder="bijv. 2019" min="1900" max="2030" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Regio</label>
+        <input class="form-input" id="f-region" placeholder="bijv. Côte de Nuits" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Land *</label>
+        <select class="form-input" id="f-country">
+          <option value="France">Frankrijk</option>
+          <option value="Italy">Italië</option>
+          <option value="Spain">Spanje</option>
+          <option value="Austria">Oostenrijk</option>
+          <option value="Germany">Duitsland</option>
+          <option value="Portugal">Portugal</option>
+          <option value="New Zealand">Nieuw-Zeeland</option>
+          <option value="Australia">Australië</option>
+          <option value="USA">Verenigde Staten</option>
+          <option value="South Africa">Zuid-Afrika</option>
+          <option value="Argentina">Argentinië</option>
+          <option value="Chile">Chili</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kleur *</label>
+        <select class="form-input" id="f-colour">
+          <option value="red">Rood</option>
+          <option value="white">Wit</option>
+          <option value="sparkling">Mousserende</option>
+          <option value="rosé">Rosé</option>
+          <option value="dessert">Dessert</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Druivenras</label>
+        <input class="form-input" id="f-grape" placeholder="bijv. Pinot Noir" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Marktprijs gem. (€) *</label>
+        <input class="form-input" id="f-price" type="number" placeholder="bijv. 65" step="0.5" min="1" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Marktprijs min (€)</label>
+        <input class="form-input" id="f-price-min" type="number" placeholder="bijv. 52" step="0.5" min="1" />
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-save" onclick="saveWine()" id="save-btn">Opslaan in database</button>
+      <button class="btn-lookup" onclick="clearForm()" style="border-color:var(--border);color:var(--muted);">Leegmaken</button>
+      <span class="save-feedback" id="save-feedback">✓ Opgeslagen!</span>
+    </div>
+  </div>
+
+  <!-- DATABASE TABEL -->
+  <div class="section-eyebrow" style="margin-bottom:0.75rem;">Database</div>
+  <div class="search-row">
+    <input class="search-input" id="search-input" placeholder="Zoek op naam, producent of regio..." oninput="filterTable()" />
+    <select class="filter-select" id="filter-colour" onchange="filterTable()">
+      <option value="">Alle kleuren</option>
+      <option value="red">Rood</option>
+      <option value="white">Wit</option>
+      <option value="sparkling">Mousserende</option>
+      <option value="rosé">Rosé</option>
+      <option value="dessert">Dessert</option>
+    </select>
+    <select class="filter-select" id="filter-country" onchange="filterTable()">
+      <option value="">Alle landen</option>
+      <option value="France">Frankrijk</option>
+      <option value="Italy">Italië</option>
+      <option value="Spain">Spanje</option>
+      <option value="Austria">Oostenrijk</option>
+      <option value="Germany">Duitsland</option>
+    </select>
+  </div>
+
+  <div class="wine-table">
+    <div class="table-header">
+      <div class="th">Wijn</div>
+      <div class="th">Producent</div>
+      <div class="th">Regio</div>
+      <div class="th">Jaar</div>
+      <div class="th">Markt €</div>
+      <div class="th">Kleur</div>
+      <div class="th"></div>
+    </div>
+    <div id="table-body"><div class="loading">Database laden...</div></div>
+  </div>
+
+</div>
+
+<script>
+  /* ── WACHTWOORD BEVEILIGING ── */
+  // Verander dit naar jouw eigen wachtwoord!
+  const ADMIN_PASSWORD = 'winesteals2026';
+
+  function checkPassword() {
+    const pw = document.getElementById('login-pw').value;
+    const hash = btoa(pw); // simpele encoding
+    if (pw === ADMIN_PASSWORD || localStorage.getItem('ws_admin_auth') === btoa(ADMIN_PASSWORD)) {
+      localStorage.setItem('ws_admin_auth', btoa(ADMIN_PASSWORD));
+      document.getElementById('login-overlay').classList.add('hidden');
+      init();
+    } else {
+      document.getElementById('login-error').style.display = 'block';
+      document.getElementById('login-pw').value = '';
+      document.getElementById('login-pw').focus();
+      // Schud de box
+      const box = document.querySelector('.login-box');
+      box.style.transform = 'translateX(-8px)';
+      setTimeout(() => box.style.transform = 'translateX(8px)', 100);
+      setTimeout(() => box.style.transform = 'translateX(0)', 200);
+    }
+  }
+
+  /* ── SUPABASE ── */
+  const URL = 'https://kdhczlabjecqxlyuxprl.supabase.co';
+  const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
+
+  const headers = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+
+  async function sb(endpoint, opts = {}) {
+    const res = await fetch(`${URL}/rest/v1/${endpoint}`, { headers, ...opts });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  /* ── STATE ── */
+  let allWines = [];
+  let todayAdded = parseInt(localStorage.getItem('ws_today_added') || '0');
+  let callsUsed = parseInt(localStorage.getItem('ws_calls_today') || '0');
+  const today = new Date().toDateString();
+  if (localStorage.getItem('ws_last_date') !== today) {
+    callsUsed = 0; todayAdded = 0;
+    localStorage.setItem('ws_calls_today', '0');
+    localStorage.setItem('ws_today_added', '0');
+    localStorage.setItem('ws_last_date', today);
+  }
+
+  /* ── INIT ── */
+  async function init() {
+    updateCallTracker();
+    document.getElementById('stat-today').textContent = todayAdded;
+    await Promise.all([loadWines(), loadPendingWines()]);
+  }
+
+  /* ── PENDING WIJNEN LADEN ── */
+  async function loadPendingWines() {
+    try {
+      const pending = await sb('wines?price_source=eq.pending&select=id,name,producer,vintage,colour,seen_list_price,seen_at_restaurant,seen_count&order=seen_count.desc&limit=50');
+      renderPending(pending);
+    } catch(e) {
+      console.warn('Pending laden mislukt:', e);
+    }
+  }
+
+  function renderPending(wines) {
+    const section = document.getElementById('pending-section');
+    const list = document.getElementById('pending-list');
+    const count = document.getElementById('pending-count');
+
+    // Sectie altijd tonen — ook als leeg
+    section.style.display = 'block';
+
+    if (!wines.length) {
+      count.textContent = '0 te doen';
+      list.innerHTML = `<div style="padding:1rem 1.25rem;font-size:0.82rem;color:var(--muted);font-style:italic;">
+        ✓ Geen wijnen zonder prijs — alles is up to date.
+      </div>`;
+      return;
+    }
+
+    count.textContent = `${wines.length} te doen`;
+
+    list.innerHTML = wines.map(w => {
+      const wsQuery = encodeURIComponent([w.name, w.producer, w.vintage].filter(Boolean).join(' '));
+      const seenLabel = w.seen_count > 1 ? `<span class="pending-seen">${w.seen_count}× gezien</span>` : '';
+      return `
+        <div class="pending-card" id="pending-${w.id}">
+          <div>
+            <div class="pending-wine-name">${w.name} ${seenLabel}</div>
+            <div class="pending-meta">
+              ${w.producer || '?'} · ${w.vintage || 'NV'}
+              ${w.seen_at_restaurant ? ' · gezien bij ' + w.seen_at_restaurant : ''}
+              ${w.seen_list_price ? ' · kaartprijs €' + w.seen_list_price : ''}
+            </div>
+          </div>
+          <div class="pending-actions">
+            <a class="btn-ws-small" href="https://www.wine-searcher.com/find/${wsQuery}/1/nl/eur" target="_blank" onclick="trackCall()">🔍 Wine-Searcher</a>
+            <input class="pending-price-input" type="number" placeholder="€ markt" id="price-${w.id}" step="0.5" min="1" />
+            <button class="btn-approve" onclick="approvePending('${w.id}')">✓ Opslaan</button>
+            <button class="btn-dismiss" onclick="dismissPending('${w.id}')" title="Verwijderen">×</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  /* ── PENDING WIJN GOEDKEUREN ── */
+  async function approvePending(id) {
+    const priceInput = document.getElementById(`price-${id}`);
+    const price = parseFloat(priceInput.value);
+    if (!price || price < 1) {
+      priceInput.focus();
+      priceInput.style.borderColor = 'var(--wine)';
+      return;
+    }
+
+    const btn = document.querySelector(`#pending-${id} .btn-approve`);
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    try {
+      await sb(`wines?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          market_price_eur: price,
+          market_price_min: Math.round(price * 0.80),
+          market_price_max: Math.round(price * 1.30),
+          price_source: 'wine-searcher',
+          price_updated_at: new Date().toISOString()
+        })
+      });
+
+      // Kaartje verwijderen + teller bijwerken
+      document.getElementById(`pending-${id}`)?.remove();
+      todayAdded++;
+      localStorage.setItem('ws_today_added', todayAdded);
+      document.getElementById('stat-today').textContent = todayAdded;
+
+      // Teller bijwerken
+      const remaining = document.querySelectorAll('[id^="pending-"]').length;
+      document.getElementById('pending-count').textContent = `${remaining} te doen`;
+      if (!remaining) document.getElementById('pending-section').style.display = 'none';
+
+      // Database tabel verversen
+      await loadWines();
+    } catch(e) {
+      alert('Fout: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = '✓ Opslaan';
+    }
+  }
+
+  /* ── PENDING WIJN AFWIJZEN ── */
+  async function dismissPending(id) {
+    if (!confirm('Wijn verwijderen uit de to-do lijst?')) return;
+    try {
+      await sb(`wines?id=eq.${id}`, { method: 'DELETE' });
+      document.getElementById(`pending-${id}`)?.remove();
+      const remaining = document.querySelectorAll('[id^="pending-"]').length;
+      document.getElementById('pending-count').textContent = `${remaining} te doen`;
+      if (!remaining) document.getElementById('pending-section').style.display = 'none';
+    } catch(e) {
+      alert('Fout: ' + e.message);
+    }
+  }
+
+  function trackCall() {
+    callsUsed = Math.min(100, callsUsed + 1);
+    localStorage.setItem('ws_calls_today', callsUsed);
+    updateCallTracker();
+  }
+
+  /* ── LOAD WINES ── */
+  async function loadWines() {
+    try {
+      const wines = await sb('wines?price_source=neq.pending&select=id,name,producer,vintage,region,country,colour,market_price_eur&order=created_at.desc&limit=500');
+      allWines = wines;
+      updateStats(wines);
+      renderTable(wines);
+    } catch(e) {
+      document.getElementById('table-body').innerHTML = `<div class="empty">Fout bij laden: ${e.message}</div>`;
+    }
+  }
+
+  function updateStats(wines) {
+    document.getElementById('stat-total').textContent = wines.length;
+    document.getElementById('stat-red').textContent = wines.filter(w => w.colour === 'red').length;
+    document.getElementById('stat-white').textContent = wines.filter(w => w.colour === 'white').length;
+  }
+
+  function renderTable(wines) {
+    const body = document.getElementById('table-body');
+    if (!wines.length) { body.innerHTML = '<div class="empty">Geen wijnen gevonden.</div>'; return; }
+    body.innerHTML = wines.map(w => `
+      <div class="table-row">
+        <div class="td wine-name">${w.name}</div>
+        <div class="td muted">${w.producer || '—'}</div>
+        <div class="td muted">${w.region || '—'}</div>
+        <div class="td muted">${w.vintage || 'NV'}</div>
+        <div class="td price">${w.market_price_eur ? '€' + w.market_price_eur : '—'}</div>
+        <div class="td">
+          <span class="colour-dot colour-${w.colour}"></span>
+          <span class="muted" style="font-size:0.72rem;">${colourNL(w.colour)}</span>
+        </div>
+        <div class="td">
+          <button class="btn-delete" onclick="deleteWine('${w.id}', this)">Verwijder</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function colourNL(c) {
+    return { red:'Rood', white:'Wit', sparkling:'Mouss.', 'rosé':'Rosé', dessert:'Dessert' }[c] || c;
+  }
+
+  /* ── FILTER ── */
+  function filterTable() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    const colour = document.getElementById('filter-colour').value;
+    const country = document.getElementById('filter-country').value;
+    const filtered = allWines.filter(w => {
+      const matchQ = !q || [w.name, w.producer, w.region].join(' ').toLowerCase().includes(q);
+      const matchC = !colour || w.colour === colour;
+      const matchCo = !country || w.country === country;
+      return matchQ && matchC && matchCo;
+    });
+    renderTable(filtered);
+  }
+
+  /* ── WINE-SEARCHER LINK ── */
+  function openWineSearcher() {
+    const name = document.getElementById('f-name').value.trim();
+    const producer = document.getElementById('f-producer').value.trim();
+    const vintage = document.getElementById('f-vintage').value.trim();
+    const query = [name, producer, vintage].filter(Boolean).join(' ');
+    const url = `https://www.wine-searcher.com/find/${encodeURIComponent(query)}/1/nl/eur`;
+    window.open(url, '_blank');
+    // Tel call
+    callsUsed = Math.min(100, callsUsed + 1);
+    localStorage.setItem('ws_calls_today', callsUsed);
+    updateCallTracker();
+    return false;
+  }
+
+  function updateWSLink() {
+    // Dynamisch de link updaten
+  }
+
+  function updateCallTracker() {
+    document.getElementById('calls-used').textContent = `${callsUsed} / 100`;
+    document.getElementById('call-bar').style.width = `${callsUsed}%`;
+    document.getElementById('call-bar').style.background = callsUsed > 80 ? '#E24B4A' : callsUsed > 50 ? '#C9A84C' : '#2E7D32';
+  }
+
+  /* ── SAVE WINE ── */
+  async function saveWine() {
+    const name = document.getElementById('f-name').value.trim();
+    const producer = document.getElementById('f-producer').value.trim();
+    const price = parseFloat(document.getElementById('f-price').value);
+    if (!name || !producer || !price) {
+      alert('Vul minimaal naam, producent en marktprijs in.');
+      return;
+    }
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true;
+    btn.textContent = 'Opslaan...';
+    const wine = {
+      name,
+      producer,
+      vintage: parseInt(document.getElementById('f-vintage').value) || null,
+      region: document.getElementById('f-region').value.trim() || null,
+      country: document.getElementById('f-country').value,
+      colour: document.getElementById('f-colour').value,
+      grape: document.getElementById('f-grape').value.trim() || null,
+      market_price_eur: price,
+      market_price_min: parseFloat(document.getElementById('f-price-min').value) || Math.round(price * 0.8),
+      market_price_max: Math.round(price * 1.3),
+      price_source: 'wine-searcher',
+    };
+    try {
+      await sb('wines', { method: 'POST', body: JSON.stringify(wine) });
+      todayAdded++;
+      localStorage.setItem('ws_today_added', todayAdded);
+      document.getElementById('stat-today').textContent = todayAdded;
+      const fb = document.getElementById('save-feedback');
+      fb.style.display = 'inline';
+      setTimeout(() => { fb.style.display = 'none'; }, 2500);
+      clearForm();
+      await loadWines();
+    } catch(e) {
+      alert('Fout bij opslaan: ' + e.message);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Opslaan in database';
+  }
+
+  function clearForm() {
+    ['f-name','f-producer','f-vintage','f-region','f-grape','f-price','f-price-min'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+  }
+
+  /* ── DELETE ── */
+  async function deleteWine(id, btn) {
+    if (!confirm('Weet je zeker dat je deze wijn wilt verwijderen?')) return;
+    btn.textContent = '...';
+    try {
+      await sb(`wines?id=eq.${id}`, { method: 'DELETE' });
+      await loadWines();
+    } catch(e) {
+      alert('Fout: ' + e.message);
+      btn.textContent = 'Verwijder';
+    }
+  }
+
+  // Check of al ingelogd — anders wacht op checkPassword()
+  if (localStorage.getItem('ws_admin_auth') === btoa(ADMIN_PASSWORD)) {
+    document.getElementById('login-overlay').classList.add('hidden');
+    init();
+  }
+</script>
+</body>
+</html>

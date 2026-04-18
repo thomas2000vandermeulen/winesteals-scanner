@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — WineSteals</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --wine: #7B1C2E; --wine-dark: #4A0F1C; --gold: #C9A84C;
+      --cream: #F8F4EE; --ink: #1A1208; --muted: #6B5E52;
+      --border: rgba(123,28,46,0.12);
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); }
+
+    .nav { display:flex; align-items:center; justify-content:space-between; padding:1.1rem 2.5rem; border-bottom:0.5px solid var(--border); background:var(--cream); }
+    .logo { font-family:'Playfair Display',serif; font-size:1.35rem; font-weight:700; color:var(--wine-dark); display:flex; align-items:center; gap:8px; text-decoration:none; }
+    .logo-dot { width:7px; height:7px; background:var(--gold); border-radius:50%; }
+    .nav-right { display:flex; align-items:center; gap:1rem; }
+    .back-link { font-family:'DM Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); text-decoration:none; }
+    .back-link:hover { color:var(--wine); }
+    .lang-toggle { display:flex; align-items:center; border:0.5px solid rgba(123,28,46,0.25); border-radius:2px; overflow:hidden; }
+    .lang-btn { padding:0.32rem 0.75rem; font-family:'DM Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; cursor:pointer; border:none; background:transparent; color:var(--muted); transition:all 0.2s; }
+    .lang-btn.active { background:var(--wine); color:var(--cream); }
+
+    .page-header { background:var(--wine-dark); padding:4rem 2.5rem; position:relative; overflow:hidden; }
+    .page-header::before { content:''; position:absolute; inset:0; opacity:0.03; background-image:repeating-linear-gradient(45deg,var(--gold) 0px,var(--gold) 1px,transparent 1px,transparent 40px); }
+    .page-header-inner { max-width:760px; margin:0 auto; position:relative; }
+    .page-eyebrow { font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold); margin-bottom:0.75rem; }
+    .page-title { font-family:'Playfair Display',serif; font-size:2.4rem; font-weight:700; color:#F8F4EE; line-height:1.1; margin-bottom:0.75rem; }
+    .page-date { font-family:'DM Mono',monospace; font-size:0.68rem; color:rgba(248,244,238,0.35); letter-spacing:0.1em; }
+
+    .content { max-width:760px; margin:0 auto; padding:4rem 2.5rem; }
+    .intro { font-size:1rem; color:var(--muted); font-weight:300; line-height:1.85; margin-bottom:3rem; padding-bottom:2rem; border-bottom:0.5px solid var(--border); }
+
+    .policy-section { margin-bottom:2.75rem; }
+    .policy-section h2 { font-family:'Playfair Display',serif; font-size:1.25rem; font-weight:700; color:var(--wine-dark); margin-bottom:0.85rem; padding-bottom:0.5rem; border-bottom:0.5px solid var(--border); }
+    .policy-section p { font-size:0.92rem; color:var(--muted); font-weight:300; line-height:1.85; margin-bottom:0.75rem; }
+    .policy-section ul { margin:0.5rem 0 0.75rem 0; padding-left:1.25rem; }
+    .policy-section ul li { font-size:0.92rem; color:var(--muted); font-weight:300; line-height:1.75; margin-bottom:0.35rem; }
+    .policy-section strong { color:var(--ink); font-weight:500; }
+    .contact-box { background:white; border:0.5px solid var(--border); border-radius:2px; padding:1.5rem; margin-top:1rem; }
+    .contact-box p { font-size:0.88rem; color:var(--muted); margin-bottom:0.4rem; }
+    .contact-box a { color:var(--wine); text-decoration:none; font-weight:500; }
+
+    .footer { padding:1.75rem 2.5rem; border-top:0.5px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-top:2rem; }
+    .footer-logo { font-family:'Playfair Display',serif; font-size:1rem; color:var(--wine-dark); font-weight:700; display:flex; align-items:center; gap:7px; }
+    .footer-links { display:flex; gap:1.5rem; list-style:none; }
+    .footer-links a { font-size:0.78rem; color:var(--muted); text-decoration:none; font-weight:300; }
+    .footer-links a:hover { color:var(--wine); }
+    .footer-copy { font-size:0.75rem; color:var(--muted); font-weight:300; }
+
+    .lang-section { display:none; }
+    .lang-section.active { display:block; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="logo"><div class="logo-dot"></div>WineSteals</a>
+  <div class="nav-right">
+    <a href="index.html" class="back-link" id="back-link">← Back</a>
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" id="btn-nl" onclick="setLang('nl')">NL</button>
+    </div>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div class="page-eyebrow" id="header-eyebrow">Legal</div>
+    <h1 class="page-title" id="header-title">Privacy Policy</h1>
+    <div class="page-date" id="header-date">Last updated: April 2026</div>
+  </div>
+</div>
+
+<!-- ENGLISH -->
+<div class="lang-section active" id="lang-en">
+  <div class="content">
+    <p class="intro">WineSteals ("we", "us", "our") is committed to protecting your privacy. This policy explains what personal data we collect, why we collect it, and how we handle it — in line with the General Data Protection Regulation (GDPR) and Dutch law.</p>
+
+    <div class="policy-section">
+      <h2>1. Who we are</h2>
+      <p>WineSteals is operated by an individual founder based in Amsterdam, the Netherlands. We can be reached at <a href="mailto:hello@winesteals.nl" style="color:var(--wine);">hello@winesteals.nl</a>.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>2. What data we collect</h2>
+      <p>We only collect data that is necessary for the service to function.</p>
+      <ul>
+        <li><strong>Email address</strong> — when you sign up for our waitlist, we store your email address to contact you about WineSteals.</li>
+        <li><strong>Usage data</strong> — if you consent to analytics cookies, we collect anonymised data about how you use the site (pages visited, time on site). No personal identifiers are stored.</li>
+        <li><strong>Uploaded files</strong> — if you upload a wine list (photo or PDF), we process it to extract wine and price data. We do not store uploaded files after processing.</li>
+      </ul>
+    </div>
+
+    <div class="policy-section">
+      <h2>3. Why we process your data</h2>
+      <ul>
+        <li><strong>Waitlist management</strong> — to inform you when WineSteals launches. Legal basis: your consent (Art. 6(1)(a) GDPR).</li>
+        <li><strong>Service improvement</strong> — anonymised analytics to understand how the site is used. Legal basis: legitimate interest (Art. 6(1)(f) GDPR), only when analytics cookies are accepted.</li>
+        <li><strong>Advertising</strong> — if you accept advertising cookies, we may show personalised ads via Google AdSense. Legal basis: your consent (Art. 6(1)(a) GDPR).</li>
+      </ul>
+    </div>
+
+    <div class="policy-section">
+      <h2>4. Cookies</h2>
+      <p>We use cookies in three categories:</p>
+      <ul>
+        <li><strong>Functional cookies</strong> — strictly necessary for the site to work (e.g. remembering your language preference and cookie consent). These are always active.</li>
+        <li><strong>Analytics cookies</strong> — anonymised usage tracking (Google Analytics). Only active if you accept.</li>
+        <li><strong>Advertising cookies</strong> — used by Google AdSense to show relevant ads. Only active if you accept.</li>
+      </ul>
+      <p>You can change your cookie preferences at any time via our <a href="cookies.html" style="color:var(--wine);">cookie policy page</a>.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>5. Third parties</h2>
+      <p>We share data with the following third parties, only to the extent necessary:</p>
+      <ul>
+        <li><strong>Google (Analytics &amp; AdSense)</strong> — only if you consent to analytics or advertising cookies. Google may process data outside the EU under Standard Contractual Clauses.</li>
+        <li><strong>Hosting provider (Netlify)</strong> — our site is hosted on Netlify. Server logs may temporarily record IP addresses. See <a href="https://www.netlify.com/privacy/" target="_blank" style="color:var(--wine);">Netlify's privacy policy</a>.</li>
+      </ul>
+      <p>We do not sell your personal data to any third party.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>6. How long we keep your data</h2>
+      <ul>
+        <li><strong>Waitlist emails</strong> — until you unsubscribe or WineSteals launches and transitions to a proper user account system, whichever comes first.</li>
+        <li><strong>Analytics data</strong> — retained for 14 months in Google Analytics (anonymised).</li>
+        <li><strong>Uploaded wine lists</strong> — deleted immediately after processing, not stored.</li>
+      </ul>
+    </div>
+
+    <div class="policy-section">
+      <h2>7. Your rights</h2>
+      <p>Under the GDPR, you have the right to:</p>
+      <ul>
+        <li>Access the personal data we hold about you</li>
+        <li>Correct inaccurate data</li>
+        <li>Request deletion of your data ("right to be forgotten")</li>
+        <li>Withdraw consent at any time (this does not affect prior processing)</li>
+        <li>Lodge a complaint with the Dutch Data Protection Authority (Autoriteit Persoonsgegevens) at <a href="https://www.autoriteitpersoonsgegevens.nl" target="_blank" style="color:var(--wine);">autoriteitpersoonsgegevens.nl</a></li>
+      </ul>
+      <p>To exercise any of these rights, contact us:</p>
+      <div class="contact-box">
+        <p><strong>WineSteals</strong></p>
+        <p>Amsterdam, the Netherlands</p>
+        <p>Email: <a href="mailto:hello@winesteals.nl">hello@winesteals.nl</a></p>
+        <p style="margin-top:0.5rem; font-size:0.8rem;">We will respond within 30 days.</p>
+      </div>
+    </div>
+
+    <div class="policy-section">
+      <h2>8. Changes to this policy</h2>
+      <p>We may update this privacy policy from time to time. We will notify waitlist subscribers of any significant changes by email. The date at the top of this page always reflects the latest version.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DUTCH -->
+<div class="lang-section" id="lang-nl">
+  <div class="content">
+    <p class="intro">WineSteals ("wij", "ons", "onze") hecht grote waarde aan de bescherming van jouw privacy. Dit beleid legt uit welke persoonsgegevens we verzamelen, waarom we dat doen en hoe we ermee omgaan — in overeenstemming met de Algemene Verordening Gegevensbescherming (AVG) en Nederlandse wetgeving.</p>
+
+    <div class="policy-section">
+      <h2>1. Wie wij zijn</h2>
+      <p>WineSteals wordt beheerd door een individuele oprichter gevestigd in Amsterdam, Nederland. Je kunt ons bereiken via <a href="mailto:hello@winesteals.nl" style="color:var(--wine);">hello@winesteals.nl</a>.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>2. Welke gegevens we verzamelen</h2>
+      <p>We verzamelen alleen gegevens die noodzakelijk zijn voor het functioneren van de dienst.</p>
+      <ul>
+        <li><strong>E-mailadres</strong> — wanneer je je aanmeldt voor onze wachtlijst, slaan we je e-mailadres op om je te informeren over WineSteals.</li>
+        <li><strong>Gebruiksgegevens</strong> — als je instemt met analytische cookies, verzamelen we geanonimiseerde gegevens over hoe je de site gebruikt (bezochte pagina's, tijd op de site). Er worden geen persoonlijke identificatoren opgeslagen.</li>
+        <li><strong>Geüploade bestanden</strong> — als je een wijnkaart uploadt (foto of PDF), verwerken we deze om wijn- en prijsgegevens te extraheren. We slaan geüploade bestanden niet op na verwerking.</li>
+      </ul>
+    </div>
+
+    <div class="policy-section">
+      <h2>3. Waarom we je gegevens verwerken</h2>
+      <ul>
+        <li><strong>Wachtlijstbeheer</strong> — om je te informeren wanneer WineSteals lanceert. Rechtsgrondslag: jouw toestemming (Art. 6(1)(a) AVG).</li>
+        <li><strong>Verbetering van de dienst</strong> — geanonimiseerde analyse om te begrijpen hoe de site wordt gebruikt. Rechtsgrondslag: gerechtvaardigd belang (Art. 6(1)(f) AVG), alleen wanneer analytische cookies worden geaccepteerd.</li>
+        <li><strong>Advertenties</strong> — als je advertentiecookies accepteert, kunnen we gepersonaliseerde advertenties tonen via Google AdSense. Rechtsgrondslag: jouw toestemming (Art. 6(1)(a) AVG).</li>
+      </ul>
+    </div>
+
+    <div class="policy-section">
+      <h2>4. Cookies</h2>
+      <p>We gebruiken cookies in drie categorieën:</p>
+      <ul>
+        <li><strong>Functionele cookies</strong> — strikt noodzakelijk voor het functioneren van de site (bijv. het onthouden van je taalvoorkeur en cookietoestemming). Deze zijn altijd actief.</li>
+        <li><strong>Analytische cookies</strong> — geanonimiseerde gebruiksregistratie (Google Analytics). Alleen actief als je akkoord gaat.</li>
+        <li><strong>Advertentiecookies</strong> — gebruikt door Google AdSense om relevante advertenties te tonen. Alleen actief als je akkoord gaat.</li>
+      </ul>
+      <p>Je kunt je cookievoorkeuren op elk moment wijzigen via onze <a href="cookies.html" style="color:var(--wine);">cookiebeleidspagina</a>.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>5. Derde partijen</h2>
+      <p>We delen gegevens met de volgende derde partijen, alleen voor zover noodzakelijk:</p>
+      <ul>
+        <li><strong>Google (Analytics &amp; AdSense)</strong> — alleen als je instemt met analytische of advertentiecookies. Google kan gegevens buiten de EU verwerken onder Standaard Contractuele Clausules.</li>
+        <li><strong>Hostingprovider (Netlify)</strong> — onze site wordt gehost op Netlify. Serverlogboeken kunnen tijdelijk IP-adressen registreren. Zie het <a href="https://www.netlify.com/privacy/" target="_blank" style="color:var(--wine);">privacybeleid van Netlify</a>.</li>
+      </ul>
+      <p>We verkopen jouw persoonsgegevens niet aan derden.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>6. Hoe lang we je gegevens bewaren</h2>
+      <ul>
+        <li><strong>Wachtlijst-e-mails</strong> — totdat je je uitschrijft of WineSteals lanceert, afhankelijk van wat het eerst komt.</li>
+        <li><strong>Analysegegevens</strong> — 14 maanden bewaard in Google Analytics (geanonimiseerd).</li>
+        <li><strong>Geüploade wijnkaarten</strong> — direct na verwerking verwijderd, niet opgeslagen.</li>
+      </ul>
+    </div>
+
+    <div class="policy-section">
+      <h2>7. Jouw rechten</h2>
+      <p>Onder de AVG heb je het recht om:</p>
+      <ul>
+        <li>De persoonsgegevens die we over jou bewaren in te zien</li>
+        <li>Onjuiste gegevens te laten corrigeren</li>
+        <li>Verwijdering van je gegevens te verzoeken ("recht op vergetelheid")</li>
+        <li>Toestemming op elk moment in te trekken (dit heeft geen invloed op eerdere verwerking)</li>
+        <li>Een klacht in te dienen bij de Autoriteit Persoonsgegevens via <a href="https://www.autoriteitpersoonsgegevens.nl" target="_blank" style="color:var(--wine);">autoriteitpersoonsgegevens.nl</a></li>
+      </ul>
+      <p>Om een van deze rechten uit te oefenen, neem dan contact met ons op:</p>
+      <div class="contact-box">
+        <p><strong>WineSteals</strong></p>
+        <p>Amsterdam, Nederland</p>
+        <p>E-mail: <a href="mailto:hello@winesteals.nl">hello@winesteals.nl</a></p>
+        <p style="margin-top:0.5rem; font-size:0.8rem;">We reageren binnen 30 dagen.</p>
+      </div>
+    </div>
+
+    <div class="policy-section">
+      <h2>8. Wijzigingen in dit beleid</h2>
+      <p>We kunnen dit privacybeleid van tijd tot tijd bijwerken. We zullen wachtlijstabonnees per e-mail informeren over belangrijke wijzigingen. De datum bovenaan deze pagina weerspiegelt altijd de meest recente versie.</p>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-logo"><div class="logo-dot"></div>WineSteals</div>
+  <ul class="footer-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="cookies.html" id="footer-cookie-link">Cookie policy</a></li>
+    <li><a href="mailto:hello@winesteals.nl">hello@winesteals.nl</a></li>
+  </ul>
+  <div class="footer-copy">© 2026 WineSteals.nl</div>
+</footer>
+
+<script>
+  let lang = 'en';
+  const labels = {
+    en: { eyebrow:'Legal', title:'Privacy Policy', date:'Last updated: April 2026', back:'← Back', cookieLink:'Cookie policy' },
+    nl: { eyebrow:'Juridisch', title:'Privacybeleid', date:'Laatst bijgewerkt: april 2026', back:'← Terug', cookieLink:'Cookiebeleid' }
+  };
+  function setLang(l) {
+    lang = l;
+    document.getElementById('btn-en').classList.toggle('active', l==='en');
+    document.getElementById('btn-nl').classList.toggle('active', l==='nl');
+    document.getElementById('lang-en').classList.toggle('active', l==='en');
+    document.getElementById('lang-nl').classList.toggle('active', l==='nl');
+    const lb = labels[l];
+    document.getElementById('header-eyebrow').textContent = lb.eyebrow;
+    document.getElementById('header-title').textContent = lb.title;
+    document.getElementById('header-date').textContent = lb.date;
+    document.getElementById('back-link').textContent = lb.back;
+    document.getElementById('footer-cookie-link').textContent = lb.cookieLink;
+    document.documentElement.lang = l;
+  }
+</script>
+</body>
+</html>

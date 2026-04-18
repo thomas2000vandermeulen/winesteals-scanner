@@ -1,1 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scan a wine list — WineSteals</title>
+  <meta name="description" content="Upload a restaurant wine list and instantly find the steals — bottles priced below market rate." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    :root {
+      --wine: #7B1C2E; --wine-light: #A8324A; --wine-dark: #4A0F1C;
+      --gold: #C9A84C; --gold-light: #E8C97A;
+      --cream: #F8F4EE; --ink: #1A1208; --muted: #6B5E52;
+      --border: rgba(123,28,46,0.12);
+      --green: #2E7D32; --green-bg: rgba(46,125,50,0.08);
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
 
+    /* ── NAV ── */
+    .nav { display:flex; align-items:center; justify-content:space-between; padding:1.1rem 2.5rem; border-bottom:0.5px solid var(--border); background:var(--cream); position:sticky; top:0; z-index:50; }
+    .logo { font-family:'Playfair Display',serif; font-size:1.35rem; font-weight:700; color:var(--wine-dark); display:flex; align-items:center; gap:8px; text-decoration:none; }
+    .logo-dot { width:7px; height:7px; background:var(--gold); border-radius:50%; }
+    .nav-back { font-family:'DM Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); text-decoration:none; transition:color 0.2s; }
+    .nav-back:hover { color:var(--wine); }
+    .lang-toggle { display:flex; align-items:center; border:0.5px solid rgba(123,28,46,0.25); border-radius:2px; overflow:hidden; }
+    .lang-btn { padding:0.32rem 0.75rem; font-family:'DM Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; cursor:pointer; border:none; background:transparent; color:var(--muted); transition:all 0.2s; }
+    .lang-btn.active { background:var(--wine); color:var(--cream); }
+
+    /* ── PAGE HEADER ── */
+    .page-header { padding:3rem 2.5rem 2.5rem; border-bottom:0.5px solid var(--border); max-width:900px; margin:0 auto; }
+    .page-eyebrow { font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold); margin-bottom:0.6rem; display:flex; align-items:center; gap:8px; }
+    .page-eyebrow::before { content:''; display:block; width:20px; height:1px; background:var(--gold); }
+    .page-title { font-family:'Playfair Display',serif; font-size:2.2rem; font-weight:700; color:var(--wine-dark); line-height:1.1; margin-bottom:0.5rem; }
+    .page-title em { font-style:italic; color:var(--wine-light); }
+    .page-sub { font-size:0.92rem; color:var(--muted); font-weight:300; line-height:1.7; }
+
+    /* ── MAIN LAYOUT ── */
+    .main { max-width:900px; margin:0 auto; padding:2.5rem; }
+
+    /* ── UPLOAD ZONE ── */
+    .upload-area { display:block; }
+    .upload-zone {
+      border:1.5px dashed rgba(123,28,46,0.25);
+      border-radius:3px;
+      padding:3.5rem 2rem;
+      text-align:center;
+      cursor:pointer;
+      transition:all 0.2s;
+      background:white;
+      position:relative;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color:var(--wine-light);
+      background:rgba(123,28,46,0.02);
+    }
+    .upload-zone input[type="file"] {
+      position:absolute; inset:0; width:100%; height:100%;
+      opacity:0; cursor:pointer; overflow:hidden;
+    }
+    .upload-area { display:block; overflow:hidden; }
+    .upload-icon { font-size:2.5rem; margin-bottom:1rem; }
+    .upload-title { font-family:'Playfair Display',serif; font-size:1.25rem; font-weight:700; color:var(--wine-dark); margin-bottom:0.4rem; }
+    .upload-sub { font-size:0.85rem; color:var(--muted); font-weight:300; margin-bottom:1.5rem; }
+    .upload-types { display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap; }
+    .upload-type { font-family:'DM Mono',monospace; font-size:0.62rem; letter-spacing:0.1em; text-transform:uppercase; background:rgba(123,28,46,0.07); color:var(--wine); padding:4px 10px; border-radius:1px; }
+
+    /* ── OR DIVIDER ── */
+    .or-divider { display:flex; align-items:center; gap:1rem; margin:1.5rem 0; }
+    .or-divider::before, .or-divider::after { content:''; flex:1; height:0.5px; background:var(--border); }
+    .or-divider span { font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); }
+
+    /* ── TEXT INPUT ── */
+    .text-input-area { background:white; border:0.5px solid var(--border); border-radius:3px; overflow:hidden; }
+    .text-input-label { padding:0.85rem 1.25rem; border-bottom:0.5px solid var(--border); font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); display:flex; align-items:center; gap:0.5rem; }
+    .text-input-label::before { content:'✏'; font-size:0.75rem; }
+    textarea {
+      width:100%; min-height:160px; padding:1.25rem;
+      font-family:'DM Sans',sans-serif; font-size:0.9rem;
+      color:var(--ink); background:transparent; border:none;
+      outline:none; resize:vertical; line-height:1.7;
+    }
+    textarea::placeholder { color:rgba(107,94,82,0.45); }
+
+    /* ── RESTAURANT NAME ── */
+    .restaurant-input-row { display:flex; gap:1rem; margin-top:1.5rem; align-items:flex-end; }
+    .input-group { flex:1; }
+    .input-label { font-family:'DM Mono',monospace; font-size:0.62rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-bottom:0.4rem; display:block; }
+    .text-input {
+      width:100%; padding:0.75rem 1rem;
+      background:white; border:0.5px solid var(--border);
+      border-radius:2px; font-family:'DM Sans',sans-serif;
+      font-size:0.9rem; color:var(--ink); outline:none;
+      transition:border-color 0.2s;
+    }
+    .text-input:focus { border-color:var(--wine-light); }
+    .text-input::placeholder { color:rgba(107,94,82,0.35); }
+
+    /* ── SCAN BUTTON ── */
+    .scan-btn {
+      background:var(--wine); color:var(--cream); border:none;
+      padding:0.75rem 2rem; border-radius:2px;
+      font-family:'DM Sans',sans-serif; font-size:0.92rem;
+      font-weight:500; cursor:pointer; transition:background 0.2s;
+      white-space:nowrap; display:flex; align-items:center; gap:0.6rem;
+    }
+    .scan-btn:hover { background:var(--wine-dark); }
+    .scan-btn:disabled { opacity:0.5; cursor:not-allowed; }
+    .scan-btn-icon { font-size:1rem; }
+
+    /* ── PROCESSING STATE ── */
+    .processing { display:none; margin-top:2.5rem; }
+    .processing.active { display:block; }
+    .processing-card { background:var(--wine-dark); border-radius:3px; padding:2rem; position:relative; overflow:hidden; }
+    .processing-card::before { content:''; position:absolute; inset:0; opacity:0.04; background-image:repeating-linear-gradient(45deg,var(--gold) 0px,var(--gold) 1px,transparent 1px,transparent 40px); }
+    .processing-header { display:flex; align-items:center; gap:0.85rem; margin-bottom:1.5rem; position:relative; }
+    .processing-spinner { width:18px; height:18px; border:2px solid rgba(201,168,76,0.2); border-top-color:var(--gold); border-radius:50%; animation:spin 0.8s linear infinite; flex-shrink:0; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .processing-title { font-family:'Playfair Display',serif; font-size:1.05rem; font-style:italic; color:var(--cream); }
+    .processing-steps { display:flex; flex-direction:column; gap:0.6rem; position:relative; }
+    .processing-step { display:flex; align-items:center; gap:0.75rem; font-size:0.82rem; color:rgba(248,244,238,0.45); transition:color 0.3s; }
+    .processing-step.active { color:rgba(248,244,238,0.9); }
+    .processing-step.done { color:var(--gold); }
+    .step-indicator { width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; font-size:0.6rem; flex-shrink:0; transition:all 0.3s; }
+    .processing-step.active .step-indicator { border-color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.1); animation:pulse 1.4s infinite; }
+    .processing-step.done .step-indicator { border-color:var(--gold); background:rgba(201,168,76,0.2); color:var(--gold); }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+    .progress-bar-wrap { margin-top:1.5rem; height:2px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; position:relative; }
+    .progress-bar-fill { height:100%; background:var(--gold); border-radius:2px; width:0%; transition:width 0.4s ease; }
+
+    /* ── RESULTS ── */
+    .results { display:none; margin-top:2.5rem; }
+    .results.active { display:block; }
+    .results-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem; }
+    .results-title { font-family:'Playfair Display',serif; font-size:1.5rem; font-weight:700; color:var(--wine-dark); }
+    .results-meta { font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
+    .results-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); border:0.5px solid var(--border); border-radius:2px; overflow:hidden; margin-bottom:1.5rem; }
+    .summary-stat { background:var(--cream); padding:1.1rem 1.25rem; }
+    .summary-stat-num { font-family:'Playfair Display',serif; font-size:1.75rem; font-weight:700; color:var(--wine); line-height:1; margin-bottom:0.25rem; }
+    .summary-stat-num.gold { color:#7A5A00; }
+    .summary-stat-label { font-size:0.75rem; color:var(--muted); font-weight:300; }
+
+    /* FILTERS */
+    .filters { display:flex; gap:0.5rem; margin-bottom:1.25rem; flex-wrap:wrap; }
+    .filter-btn { font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.08em; text-transform:uppercase; padding:0.4rem 0.85rem; border-radius:1px; border:0.5px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all 0.2s; }
+    .filter-btn.active { background:var(--wine); color:var(--cream); border-color:var(--wine); }
+    .filter-btn:hover:not(.active) { border-color:var(--wine-light); color:var(--wine); }
+
+    /* WINE RESULT ROWS */
+    .results-list { border:0.5px solid var(--border); border-radius:2px; overflow:hidden; background:white; }
+    .results-list-header { background:var(--wine-dark); padding:0.85rem 1.25rem; display:flex; justify-content:space-between; align-items:center; }
+    .results-list-title { font-family:'Playfair Display',serif; font-size:0.9rem; font-style:italic; color:rgba(255,255,255,0.9); }
+    .results-list-meta { font-family:'DM Mono',monospace; font-size:0.6rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold); }
+    .result-row { display:flex; align-items:center; padding:1rem 1.25rem; border-bottom:0.5px solid var(--border); gap:0.85rem; transition:background 0.15s; }
+    .result-row:last-child { border-bottom:none; }
+    .result-row:hover { background:rgba(123,28,46,0.02); }
+    .result-row.steal { background:rgba(201,168,76,0.05); }
+    .steal-indicator { width:3px; border-radius:2px; flex-shrink:0; align-self:stretch; min-height:38px; }
+    .steal-indicator.yes { background:var(--gold); }
+    .steal-indicator.no { background:transparent; }
+    .result-name { flex:1; min-width:0; }
+    .result-wine { font-family:'Playfair Display',serif; font-size:0.9rem; font-style:italic; color:var(--wine-dark); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .result-region { font-size:0.68rem; color:var(--muted); font-family:'DM Mono',monospace; letter-spacing:0.04em; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .result-prices { text-align:right; flex-shrink:0; }
+    .result-list-price { font-size:0.9rem; color:var(--ink); font-family:'DM Mono',monospace; font-weight:500; }
+    .result-market-price { font-size:0.7rem; color:var(--muted); font-weight:300; margin-top:1px; }
+    .result-market-price.cheaper { color:var(--green); }
+    .score-bubble { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'DM Mono',monospace; font-size:0.72rem; font-weight:500; flex-shrink:0; }
+    .score-bubble.high { background:rgba(201,168,76,0.18); color:#7A5A00; }
+    .score-bubble.mid { background:rgba(123,28,46,0.08); color:var(--wine); }
+    .score-bubble.low { background:rgba(107,94,82,0.08); color:var(--muted); }
+    .steal-badge-sm { font-family:'DM Mono',monospace; font-size:0.58rem; letter-spacing:0.08em; text-transform:uppercase; background:var(--gold); color:var(--wine-dark); padding:2px 6px; border-radius:1px; display:inline-block; margin-top:3px; }
+
+    /* ── NEW SCAN BUTTON ── */
+    .new-scan-row { margin-top:1.5rem; display:flex; justify-content:center; }
+    .btn-ghost { background:transparent; color:var(--wine); border:0.5px solid var(--wine); padding:0.7rem 1.75rem; border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.88rem; font-weight:500; cursor:pointer; transition:all 0.2s; }
+    .btn-ghost:hover { background:var(--wine); color:var(--cream); }
+
+    /* ── NOTE BOX ── */
+    .note-box { margin-top:2rem; padding:1rem 1.25rem; border-left:2px solid var(--gold); background:rgba(201,168,76,0.06); border-radius:0 2px 2px 0; }
+    .note-box p { font-size:0.82rem; color:var(--muted); font-weight:300; line-height:1.65; }
+    .note-box strong { color:var(--ink); font-weight:500; }
+
+    /* ── FOOTER ── */
+    .footer { padding:1.75rem 2.5rem; border-top:0.5px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-top:3rem; }
+    .footer-logo { font-family:'Playfair Display',serif; font-size:1rem; color:var(--wine-dark); font-weight:700; display:flex; align-items:center; gap:7px; text-decoration:none; }
+    .footer-copy { font-size:0.75rem; color:var(--muted); font-weight:300; }
+
+    @media (max-width: 600px) {
+      .nav { padding:1rem 1.25rem; }
+      .page-header, .main { padding:2rem 1.25rem; }
+      .restaurant-input-row { flex-direction:column; }
+      .results-summary { grid-template-columns:1fr 1fr; }
+      .result-row { padding:0.85rem 1rem; }
+      .result-wine { font-size:0.82rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="index.html" class="logo"><div class="logo-dot"></div>WineSteals</a>
+  <div style="display:flex; align-items:center; gap:1.25rem;">
+    <a href="index.html" class="nav-back" id="nav-back">← Back</a>
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" id="btn-nl" onclick="setLang('nl')">NL</button>
+    </div>
+  </div>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <div class="page-eyebrow" id="hdr-eyebrow">Wine scanner</div>
+  <h1 class="page-title" id="hdr-title">Scan a <em>wine list</em></h1>
+  <p class="page-sub" id="hdr-sub">Upload a photo or PDF, or paste the wine list as text. We'll score every bottle and surface the steals.</p>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- UPLOAD SECTION -->
+  <div id="upload-section">
+
+    <!-- DRAG/DROP UPLOAD -->
+    <label class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept="image/*,.pdf" />
+      <div class="upload-icon">📋</div>
+      <div class="upload-title" id="upload-title">Drop your wine list here</div>
+      <div class="upload-sub" id="upload-sub">Drag and drop, or click to browse</div>
+      <div class="upload-types">
+        <span class="upload-type">JPG</span>
+        <span class="upload-type">PNG</span>
+        <span class="upload-type">PDF</span>
+        <span class="upload-type">HEIC</span>
+      </div>
+    </label>
+
+    <!-- OR -->
+    <div class="or-divider"><span id="or-text">or type / paste the wine list</span></div>
+
+    <!-- TEXT INPUT -->
+    <div class="text-input-area">
+      <div class="text-input-label" id="textarea-label">Paste wine list text</div>
+      <textarea id="wine-text" placeholder="e.g.
+Gevrey-Chambertin 1er Cru, Rossignol-Trapet 2019 — €95
+Barolo DOCG, Fontanafredda 2018 — €110
+Rías Baixas Albariño, Do Ferreiro 2022 — €42
+Pouilly-Fumé, Dagueneau 2021 — €135
+Chambolle-Musigny, Drouhin 2018 — €88"></textarea>
+    </div>
+
+    <!-- RESTAURANT + SCAN -->
+    <div class="restaurant-input-row">
+      <div class="input-group">
+        <label class="input-label" id="rest-label">Restaurant name (optional)</label>
+        <input type="text" class="text-input" id="restaurant-name" placeholder="e.g. Bord'Eau, Amsterdam" />
+      </div>
+      <button class="scan-btn" id="scan-btn" onclick="startScan()">
+        <span class="scan-btn-icon">🔍</span>
+        <span id="scan-btn-text">Scan for steals</span>
+      </button>
+    </div>
+
+    <div class="note-box" style="margin-top:1.5rem;">
+      <p id="note-text"><strong>Demo mode:</strong> This scanner uses example data to show you how WineSteals works. The AI pricing engine is coming soon — sign up to the waitlist to be notified when it launches.</p>
+    </div>
+
+  </div>
+
+  <!-- PROCESSING -->
+  <div class="processing" id="processing">
+    <div class="processing-card">
+      <div class="processing-header">
+        <div class="processing-spinner"></div>
+        <div class="processing-title" id="proc-title">Analysing your wine list…</div>
+      </div>
+      <div class="processing-steps">
+        <div class="processing-step" id="step-1">
+          <div class="step-indicator" id="step-1-ind">1</div>
+          <span id="step-1-text">Reading wine list</span>
+        </div>
+        <div class="processing-step" id="step-2">
+          <div class="step-indicator" id="step-2-ind">2</div>
+          <span id="step-2-text">Identifying wines & vintages</span>
+        </div>
+        <div class="processing-step" id="step-3">
+          <div class="step-indicator" id="step-3-ind">3</div>
+          <span id="step-3-text">Fetching market prices</span>
+        </div>
+        <div class="processing-step" id="step-4">
+          <div class="step-indicator" id="step-4-ind">4</div>
+          <span id="step-4-text">Calculating steal scores</span>
+        </div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results">
+    <div class="results-header">
+      <div>
+        <div class="results-title" id="results-title">Results</div>
+        <div class="results-meta" id="results-meta"></div>
+      </div>
+      <button class="btn-ghost" onclick="resetScan()" id="new-scan-btn">+ New scan</button>
+    </div>
+
+    <div class="results-summary">
+      <div class="summary-stat">
+        <div class="summary-stat-num" id="stat-total">0</div>
+        <div class="summary-stat-label" id="stat-total-label">Wines analysed</div>
+      </div>
+      <div class="summary-stat">
+        <div class="summary-stat-num gold" id="stat-steals">0</div>
+        <div class="summary-stat-label" id="stat-steals-label">Steals found</div>
+      </div>
+      <div class="summary-stat">
+        <div class="summary-stat-num" id="stat-best">—</div>
+        <div class="summary-stat-label" id="stat-best-label">Best steal score</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <button class="filter-btn active" onclick="filterResults('all', this)" id="filter-all">All wines</button>
+      <button class="filter-btn" onclick="filterResults('steals', this)" id="filter-steals">Steals only</button>
+      <button class="filter-btn" onclick="filterResults('red', this)" id="filter-red">Red</button>
+      <button class="filter-btn" onclick="filterResults('white', this)" id="filter-white">White</button>
+    </div>
+
+    <div class="results-list">
+      <div class="results-list-header">
+        <div class="results-list-title" id="results-list-title">Bord'Eau · Amsterdam</div>
+        <div class="results-list-meta" id="results-list-meta">Ranked by steal score</div>
+      </div>
+      <div id="results-rows"></div>
+    </div>
+
+    <div class="note-box" style="margin-top:1.5rem;">
+      <p id="results-note-text"><strong>These are demo results.</strong> The real WineSteals engine will cross-reference your wine list against live market prices from Wine-Searcher, Vivino and Dutch retailers. <a href="index.html#waitlist" style="color:var(--wine);">Join the waitlist</a> to be the first to use it.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <a href="index.html" class="footer-logo"><div class="logo-dot"></div>WineSteals</a>
+  <div class="footer-copy">© 2026 WineSteals.nl</div>
+</footer>
+
+<script>
+  /* ── LANGUAGE ── */
+  let lang = 'en';
+  const t = {
+    en: {
+      navBack: '← Back',
+      eyebrow: 'Wine scanner',
+      title: 'Scan a <em>wine list</em>',
+      sub: 'Upload a photo or PDF, or paste the wine list as text. We\'ll score every bottle and surface the steals.',
+      uploadTitle: 'Drop your wine list here',
+      uploadSub: 'Drag and drop, or click to browse',
+      orText: 'or type / paste the wine list',
+      textareaLabel: 'Paste wine list text',
+      restLabel: 'Restaurant name (optional)',
+      restPlaceholder: 'e.g. Bord\'Eau, Amsterdam',
+      scanBtn: 'Scan for steals',
+      noteText: '<strong>Demo mode:</strong> This scanner uses example data to show you how WineSteals works. The AI pricing engine is coming soon — sign up to the waitlist to be notified when it launches.',
+      procTitle: 'Analysing your wine list…',
+      step1: 'Reading wine list',
+      step2: 'Identifying wines & vintages',
+      step3: 'Fetching market prices',
+      step4: 'Calculating steal scores',
+      resultsTitle: 'Results',
+      statTotalLabel: 'Wines analysed',
+      statStealsLabel: 'Steals found',
+      statBestLabel: 'Best steal score',
+      filterAll: 'All wines',
+      filterSteals: 'Steals only',
+      filterRed: 'Red',
+      filterWhite: 'White',
+      rankedBy: 'Ranked by steal score',
+      newScan: '+ New scan',
+      market: 'market',
+      resultsNote: '<strong>These are demo results.</strong> The real WineSteals engine will cross-reference your wine list against live market prices from Wine-Searcher, Vivino and Dutch retailers. <a href="index.html#waitlist" style="color:var(--wine);">Join the waitlist</a> to be the first to use it.',
+    },
+    nl: {
+      navBack: '← Terug',
+      eyebrow: 'Wijn scanner',
+      title: 'Scan een <em>wijnkaart</em>',
+      sub: 'Upload een foto of PDF, of plak de wijnkaart als tekst. We scoren elke fles en vinden de steals.',
+      uploadTitle: 'Sleep je wijnkaart hierheen',
+      uploadSub: 'Slepen of klikken om te bladeren',
+      orText: 'of typ / plak de wijnkaart',
+      textareaLabel: 'Plak wijnkaart tekst',
+      restLabel: 'Restaurantnaam (optioneel)',
+      restPlaceholder: 'bijv. Bord\'Eau, Amsterdam',
+      scanBtn: 'Scan op steals',
+      noteText: '<strong>Demomodus:</strong> Deze scanner gebruikt voorbeeldgegevens om te laten zien hoe WineSteals werkt. De AI-prijsmotor komt binnenkort — meld je aan voor de wachtlijst.',
+      procTitle: 'Wijnkaart wordt geanalyseerd…',
+      step1: 'Wijnkaart lezen',
+      step2: 'Wijnen en jaargangen identificeren',
+      step3: 'Marktprijzen ophalen',
+      step4: 'Steal scores berekenen',
+      resultsTitle: 'Resultaten',
+      statTotalLabel: 'Wijnen geanalyseerd',
+      statStealsLabel: 'Steals gevonden',
+      statBestLabel: 'Beste steal score',
+      filterAll: 'Alle wijnen',
+      filterSteals: 'Alleen steals',
+      filterRed: 'Rood',
+      filterWhite: 'Wit',
+      rankedBy: 'Gerangschikt op steal score',
+      newScan: '+ Nieuwe scan',
+      market: 'markt',
+      resultsNote: '<strong>Dit zijn demoresultaten.</strong> De echte WineSteals-motor vergelijkt je wijnkaart met actuele marktprijzen van Wine-Searcher, Vivino en Nederlandse retailers. <a href="index.html#waitlist" style="color:var(--wine);">Meld je aan</a> voor vroege toegang.',
+    }
+  };
+
+  function setLang(l) {
+    lang = l;
+    document.getElementById('btn-en').classList.toggle('active', l === 'en');
+    document.getElementById('btn-nl').classList.toggle('active', l === 'nl');
+    renderLang();
+  }
+
+  function renderLang() {
+    const c = t[lang];
+    document.getElementById('nav-back').textContent = c.navBack;
+    document.getElementById('hdr-eyebrow').textContent = c.eyebrow;
+    document.getElementById('hdr-title').innerHTML = c.title;
+    document.getElementById('hdr-sub').textContent = c.sub;
+    document.getElementById('upload-title').textContent = c.uploadTitle;
+    document.getElementById('upload-sub').textContent = c.uploadSub;
+    document.getElementById('or-text').textContent = c.orText;
+    document.getElementById('textarea-label').innerHTML = '✏ ' + c.textareaLabel;
+    document.getElementById('rest-label').textContent = c.restLabel;
+    document.getElementById('restaurant-name').placeholder = c.restPlaceholder;
+    document.getElementById('scan-btn-text').textContent = c.scanBtn;
+    document.getElementById('note-text').innerHTML = c.noteText;
+    document.getElementById('proc-title').textContent = c.procTitle;
+    document.getElementById('step-1-text').textContent = c.step1;
+    document.getElementById('step-2-text').textContent = c.step2;
+    document.getElementById('step-3-text').textContent = c.step3;
+    document.getElementById('step-4-text').textContent = c.step4;
+    document.getElementById('results-title').textContent = c.resultsTitle;
+    document.getElementById('stat-total-label').textContent = c.statTotalLabel;
+    document.getElementById('stat-steals-label').textContent = c.statStealsLabel;
+    document.getElementById('stat-best-label').textContent = c.statBestLabel;
+    document.getElementById('filter-all').textContent = c.filterAll;
+    document.getElementById('filter-steals').textContent = c.filterSteals;
+    document.getElementById('filter-red').textContent = c.filterRed;
+    document.getElementById('filter-white').textContent = c.filterWhite;
+    document.getElementById('results-list-meta').textContent = c.rankedBy;
+    document.getElementById('new-scan-btn').textContent = c.newScan;
+    document.getElementById('results-note-text').innerHTML = c.resultsNote;
+  }
+
+  /* ── SUPABASE CONFIG ── */
+  const SUPABASE_URL = 'https://kdhczlabjecqxlyuxprl.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
+
+  // Railway AI scanner — wordt ingevuld zodra Railway live is
+  // Zet op null om de regex parser te gebruiken als fallback
+  const RAILWAY_URL = '';
+
+  /* ── STATE ── */
+  let currentFilter = 'all';
+  let scannedRestaurant = '';
+  let scanResults = [];
+
+  /* ── SUPABASE QUERY ── */
+  async function querySupabase(endpoint, params = '') {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}${params}`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!res.ok) throw new Error(`Supabase error: ${res.status}`);
+    return res.json();
+  }
+
+  /* ── WINE PARSER ──
+     Parst wijnkaart tekst naar wijn entries
+     Herkent formaten:
+     - "2021 - Fleurie, Foillard Gamay 70"  (Rijsel stijl)
+     - "Gevrey-Chambertin, Rossignol 2019 — €95"
+     - "Barolo DOCG - Fontanafredda 2018 - €110"
+     - "Rías Baixas Albariño Do Ferreiro 2022 €42"
+  ── */
+  // Flesformaat detecteren en factor teruggeven t.o.v. 750ml
+  function detectBottleFormat(line) {
+    const l = line.toLowerCase();
+    // Halve fles (375ml)
+    if (/\(0[,.]375\s*l?\)|\b0[,.]375\b|1\/2\s*fles|halve\s*fles|half\s*bottle|\(0[,.]5\s*l\)/.test(l))
+      return { label: '½ fles', factor: 0.5 };
+    // Piccolo (187ml)
+    if (/\(0[,.]187\s*l?\)|\b0[,.]187\b/.test(l))
+      return { label: 'piccolo', factor: 0.25 };
+    // Vin Jaune formaat (620ml)
+    if (/\(0[,.]62\s*l\)/.test(l))
+      return { label: '620ml', factor: 0.83 };
+    // Magnum (1.5L)
+    if (/\bmagnum\b|\(1[,.]5\s*l\)|\b1[,.]5\s*l/.test(l))
+      return { label: 'magnum', factor: 2 };
+    // Dubbele magnum / Jeroboam (3L)
+    if (/\bdubbelmagnum\b|\bjeroboam\b|\(3\s*l\)|\bdubbelmag\b/.test(l))
+      return { label: '3L', factor: 4 };
+    // Standaard 750ml
+    return { label: null, factor: 1 };
+  }
+
+  function parseWineText(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 5);
+    const wines = [];
+
+    for (let line of lines) {
+      // Skip sectie headers
+      if (line.match(/^[A-Z\s\/\-&]+$/) && line.length < 35) continue;
+      if (line.startsWith('*') && line.length < 20) continue;
+
+      // Flesformaat detecteren
+      const bottle = detectBottleFormat(line);
+
+      // ── STAP 1: normaliseer speciale scheidingstekens ──
+      // Puntjes (1. Barolo ......... 38) → verwijderen
+      line = line.replace(/\.{3,}/g, ' ');
+      // Jaargang met punt erna (2021.) → strip de punt
+      line = line.replace(/\b((19|20)\d{2})\.\s/g, '$1 ');
+      // Pipe als scheiding (Pol Roger | Brut Réserve) → komma
+      line = line.replace(/\s*\|\s*/g, ', ');
+      // Twee prijzen op één regel (glas + fles): pak de laatste (= flesprijs)
+      // bijv. "...  11   61" → gebruik 61
+      line = line.replace(/\s+(\d{1,3}(?:[.,]\d{1,2})?)\s{2,}(\d{2,4}(?:[.,]\d{1,2})?)\s*$/, ' $2');
+      // Slash als scheidingsteken → komma (Barolo / Conterno / 2016 / 85)
+      if ((line.match(/\//g) || []).length >= 2) {
+        line = line.replace(/\s*\/\s*/g, ', ');
+      }
+      // Tab als scheidingsteken → komma
+      line = line.replace(/\t+/g, ', ');
+      // Nummers aan het begin (1. 2. 3.) → verwijderen
+      line = line.replace(/^\d+\.\s*/, '');
+      // Druiven + regio regels skippen (staan onder de wijn in Toet formaat)
+      // "Pinot Noir, Chardonnay - Champagne, Frankrijk"
+      if (line.match(/^[\s]*(Pinot|Chardonnay|Riesling|Gamay|Grenache|Syrah|Merlot|Cabernet|Nebbiolo|Sangiovese|Sauvignon|Chenin|Viognier|Albari|Vermentino|Barbera|Corvina|Tempranillo|Muscat|Gewurz|Meunier|Nerello).+\s*-\s*(Champagne|Bourgogne|Bordeaux|Toscana|Piemonte|Veneto|Alsace|Loire|Rhône|Jura|Roussillon|Sardini|Spanje|Italië|Frankrijk|Duitsland|Oostenrijk|Portugal)/i)) continue;
+      // Meerdere spaties → één spatie
+      line = line.replace(/\s+/g, ' ').trim();
+
+      // ── STAP 2: prijs zoeken ──
+      // Formaat A: € teken (€95, €95.00, € 95)
+      let priceMatch = line.match(/€\s?(\d+[.,]?\d*)/);
+      // Formaat B: getal aan het einde (Rijsel stijl: "...Gamay 70")
+      if (!priceMatch) priceMatch = line.match(/\s(\d{2,4}(?:[.,]\d{1,2})?)\s*\*?\s*$/);
+      if (!priceMatch) continue;
+
+      const price = parseFloat(priceMatch[1].replace(',', '.'));
+      if (price < 8 || price > 10000) continue;
+
+      // ── STAP 3: jaargang en n.v. herkennen ──
+      const vintageMatch = line.match(/\b(19|20)\d{2}\b/);
+      const vintage = vintageMatch ? parseInt(vintageMatch[0]) : null;
+      const isNV = /\bn\.?\s?v\.?\b/i.test(line);
+
+      // ── STAP 4: schoonmaken ──
+      let cleaned = line
+        .replace(/€\s?\d+[.,]?\d*/g, '')           // € prijs
+        .replace(/\s\d{2,4}(?:[.,]\d{1,2})?\s*\*?\s*$/, '') // prijs aan einde
+        .replace(/\b(19|20)\d{2}\b/, '')            // jaargang
+        .replace(/\bn\.?\s?v\.?\b\s*[,\-–—]?\s*/gi, '') // n.v. / NV
+        .replace(/\([^)]*\)/g, '')                  // haakjes
+        .replace(/\*+/g, '')
+        .replace(/^\s*[-–—]\s*/, '')                // streepje aan het begin (Rijsel stijl artefact)
+        .replace(/\s+/g, ' ').trim();
+
+      // ── STAP 5: naam en producent scheiden ──
+      // Splits op komma — meest voorkomende scheiding
+      const parts = cleaned.split(',').map(p => p.trim()).filter(p => p.length > 1);
+      let name = '', producer = '';
+
+      // Herkenbaar als regio/appellation (eerste deel)
+      const regionPattern = /^(Alsace|Wachau|Loire|Bordeaux|Bourgogne|Rh[oô]ne|Rioja|Champagne|Jura|Savoie|Provence|Corse|Mosel|Nahe|Pfalz|Baden|Rheingau|Piemonte|Toscane|Toscana|Veneto|Galicia|Languedoc|Roussillon|C[oô]tes|C[oô]te|Pays|Vin de|IGP|IGT|VdF|Sauternes|Barsac|Pomerol|Margaux|Pauillac|Saint|Pessac|Graves|M[eé]doc|Carnuntum|Burgenland|Kamptal|Beaujolais|Muscadet|Anjou|Vouvray|Sancerre|Pouilly|Bandol|Gigondas|Vacqueyras|Crozes|Hermitage|Cornas|Condrieu|Arbois|Barolo|Barbaresco|Chianti|Brunello|Amarone|Soave|Priorat|Ribera|Rías|Rias|Chablis|Meursault|Puligny|Chassagne|Nuits|Gevrey|Volnay|Pommard|Beaune|Vaucluse|Morgon|Fleurie|Moulin|Côtes|Etna|Campania|Douro)/i;
+
+      if (parts.length >= 3) {
+        const firstIsRegion = parts[0].match(regionPattern);
+        if (firstIsRegion) {
+          // "Gevrey-Chambertin, Rossignol-Trapet, 1er Cru" → regio + producent + cru
+          producer = parts[1];
+          name = parts.slice(2).join(', ');
+          // Als naam leeg is, gebruik regio als naam
+          if (!name || name.length < 2) { name = parts[0]; producer = parts[1]; }
+        } else {
+          // Geen duidelijke regio → eerste = naam, tweede = producent
+          name = parts[0];
+          producer = parts[1];
+        }
+      } else if (parts.length === 2) {
+        const firstIsRegion = parts[0].match(regionPattern);
+        if (firstIsRegion) {
+          // "Meursault, Coche-Dury" → regio = naam, tweede = producent
+          name = parts[0];
+          producer = parts[1];
+        } else {
+          name = parts[0];
+          producer = parts[1];
+        }
+      } else {
+        // Geen komma — probeer spaties als scheiding (tabblad formaat)
+        // "Barolo Fontanafredda" — eerste woord(en) = naam, rest = producent
+        const words = cleaned.split(' ');
+        if (words.length >= 2) {
+          // Bekende wijnnamen zijn vaak 1-3 woorden
+          name = words.slice(0, Math.min(3, words.length)).join(' ');
+          producer = words.slice(Math.min(3, words.length)).join(' ');
+        } else {
+          name = cleaned;
+        }
+      }
+
+      // ── STAP 6: druivenrassen uit naam verwijderen ──
+      const grapeKw = /\b(Pinot Noir|Pinot Gris|Pinot Blanc|Chardonnay|Riesling|Gamay|Syrah|Grenache|Cabernet Sauvignon|Cabernet Franc|Cabernet|Merlot|Nebbiolo|Sangiovese|Sauvignon Blanc|Sauvignon|Chenin Blanc|Chenin|Viognier|Roussanne|Marsanne|Mourvèdre|Tempranillo|Albariño|Blaufränkisch|Auxerrois|Trousseau|Poulsard|Savagnin|Jacquère|Altesse|Melon de Bourgogne|Carignan|Cinsault|Clairette|Muscat Ottonel|Muscat|Gewurztraminer|Gewürztraminer|Semillon|Sémillon|Barbera|Dolcetto|Corvina|Pinot Meunier|Pinot Auxerrois|Petit Verdot|Sciaccarellu|Nerello Mascalese)\b/gi;
+      name = name.replace(grapeKw, '').replace(/\bo\.a\.\b/gi, '').replace(/[,\s]+$/, '').replace(/\s+/g, ' ').trim();
+      name = name.replace(/['''""\u2018\u2019\u201c\u201d]/g, '').trim();
+      producer = producer.replace(grapeKw, '').replace(/['''""\u2018\u2019\u201c\u201d]/g, '').trim();
+
+      // Producent met enkel puntjes negeren (artefact van genummerde lijst)
+      if (producer.replace(/\./g, '').trim().length < 2) producer = '';
+
+      if (name.length < 3) continue;
+      wines.push({ raw: line, name, producer, vintage: isNV ? null : vintage, listPrice: price, isNV, bottleLabel: bottle.label, bottleFactor: bottle.factor });
+    }
+    return wines;
+  }
+
+  /* ── MATCH WINE AGAINST DATABASE ── */
+  async function matchWine(parsed) {
+    const fields = 'id,name,producer,vintage,region,country,colour,grape,market_price_eur,market_price_min,market_price_max,critic_score';
+    const enc = s => encodeURIComponent(s.trim());
+
+    const nameParts = parsed.name.split(' ').filter(w => w.length > 2).slice(0, 4);
+    const producerParts = parsed.producer ? parsed.producer.split(' ').filter(w => w.length > 1) : [];
+    const producerFirst = producerParts[0] || '';
+    const producerSecond = producerParts[1] || '';
+
+    // Minimum match score om als geldig te beschouwen
+    // Zo voorkom je dat een andere producent uit dezelfde appellation wordt gebruikt
+    // Hoge drempel — voorkomt false matches
+    const MIN_CONFIDENCE = 6;
+
+    function scoreMatch(w) {
+      let score = 0;
+      const wName = (w.name || '').toLowerCase();
+      const wProducer = (w.producer || '').toLowerCase();
+      const pName = parsed.name.toLowerCase();
+      const pProducer = parsed.producer.toLowerCase();
+
+      // NAAM match — zwaarst gewogen
+      if (wName === pName) score += 10;
+      else if (wName.includes(pName) || pName.includes(wName)) score += 6;
+      else if (nameParts.some(p => p.length > 3 && wName.includes(p.toLowerCase()))) score += 2;
+
+      // PRODUCENT match — verplicht als we een producent hebben
+      if (producerFirst) {
+        if (wProducer.includes(producerFirst.toLowerCase())) score += 8;
+        else if (producerSecond && wProducer.includes(producerSecond.toLowerCase())) score += 4;
+        else {
+          // Producent matcht NIET → harde straf, match onmogelijk
+          score -= 15;
+        }
+      }
+
+      // JAARGANG match — bonus
+      if (parsed.vintage && w.vintage === parsed.vintage) score += 3;
+      else if (parsed.vintage && w.vintage && Math.abs(parsed.vintage - w.vintage) <= 2) score += 1;
+
+      return score;
+    }
+
+    try {
+      let candidates = [];
+
+      // Strategie 1 — naam + producent (meest specifiek, hoogste prioriteit)
+      if (producerFirst && nameParts.length) {
+        candidates = await querySupabase('wines',
+          `?producer=ilike.*${enc(producerFirst)}*&name=ilike.*${enc(nameParts[0])}*&limit=5&select=${fields}`);
+      }
+
+      // Strategie 2 — producent alleen (voor gevallen als "Jamet" als wijnaam)
+      if (!candidates.length && producerFirst) {
+        const res = await querySupabase('wines',
+          `?producer=ilike.*${enc(producerFirst)}*&limit=5&select=${fields}`);
+        // Alleen accepteren als naam ook een beetje matcht
+        candidates = res.filter(w =>
+          nameParts.some(p => (w.name || '').toLowerCase().includes(p.toLowerCase())) ||
+          (w.name || '').toLowerCase().includes(producerFirst.toLowerCase())
+        );
+      }
+
+      // Strategie 3 — naam meerdere woorden, GEEN producent vereist
+      // maar dan moet de score hoog genoeg zijn zonder producent
+      if (!candidates.length && nameParts.length >= 2) {
+        candidates = await querySupabase('wines',
+          `?name=ilike.*${enc(nameParts.slice(0, 2).join(' '))}*&limit=5&select=${fields}`);
+      }
+
+      // Strategie 4 — naam eerste woord, maar ALLEEN als we ook producent hebben
+      // en die producent matcht — zo voorkom je verkeerde appellation matches
+      if (!candidates.length && nameParts.length && producerFirst) {
+        const res = await querySupabase('wines',
+          `?name=ilike.*${enc(nameParts[0])}*&limit=10&select=${fields}`);
+        // Filter streng: producent moet matchen
+        candidates = res.filter(w =>
+          (w.producer || '').toLowerCase().includes(producerFirst.toLowerCase()) ||
+          (producerSecond && (w.producer || '').toLowerCase().includes(producerSecond.toLowerCase()))
+        );
+      }
+
+      if (!candidates.length) return null;
+
+      // Beste match bepalen op basis van score
+      let best = null;
+      let bestScore = MIN_CONFIDENCE - 1; // onder minimum = geen match
+
+      for (const w of candidates) {
+        const s = scoreMatch(w);
+        if (s > bestScore) { bestScore = s; best = w; }
+      }
+
+      // Als de beste match onder de minimumdrempel zit → geen match
+      // Dit voorkomt dat een random wijn uit dezelfde appellation wordt gebruikt
+      if (!best || bestScore < MIN_CONFIDENCE) return null;
+
+      return best;
+    } catch (e) {
+      console.warn('Match failed for:', parsed.name, e);
+      return null;
+    }
+  }
+
+  /* ── STEAL SCORE BEREKENEN ── */
+  function calculateScore(listPrice, marketPrice) {
+    if (!marketPrice || marketPrice === 0) return null;
+    const ratio = listPrice / marketPrice;
+    const score = Math.round(100 * (1.5 - ratio));
+    return Math.max(0, Math.min(100, score));
+  }
+
+  /* ── DRAG & DROP ── */
+  const zone = document.getElementById('upload-zone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+  document.getElementById('file-input').addEventListener('change', e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  /* ── PDF.JS LADEN ── */
+  let pdfJsLoaded = false;
+  function loadPdfJs() {
+    return new Promise((resolve) => {
+      if (pdfJsLoaded) { resolve(); return; }
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = () => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        pdfJsLoaded = true;
+        resolve();
+      };
+      document.head.appendChild(script);
+    });
+  }
+
+  /* ── FILE HANDLER ── */
+  let selectedFile = null;
+
+  function handleFile(file) {
+    selectedFile = file;
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const icon = isPdf ? '📄' : '🖼';
+    document.getElementById('upload-title').textContent = `${icon} ${file.name}`;
+    document.getElementById('upload-sub').textContent = `${(file.size / 1024).toFixed(0)} KB · ${isPdf ? 'PDF — tekst wordt automatisch uitgelezen' : 'afbeelding geselecteerd'}`;
+    zone.style.borderColor = 'var(--wine-light)';
+    zone.style.background = 'rgba(123,28,46,0.02)';
+  }
+
+  /* ── PDF TEKST EXTRACTOR ── */
+  async function extractPdfText(file) {
+    await loadPdfJs();
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      // Sorteer items op y-positie (van boven naar beneden), dan x (links naar rechts)
+      const items = content.items.sort((a, b) => {
+        const yDiff = Math.round(b.transform[5]) - Math.round(a.transform[5]);
+        if (Math.abs(yDiff) > 3) return yDiff;
+        return a.transform[4] - b.transform[4];
+      });
+      let lastY = null;
+      let line = '';
+      for (const item of items) {
+        const y = Math.round(item.transform[5]);
+        if (lastY !== null && Math.abs(y - lastY) > 3) {
+          if (line.trim()) fullText += line.trim() + '\n';
+          line = '';
+        }
+        line += item.str + ' ';
+        lastY = y;
+      }
+      if (line.trim()) fullText += line.trim() + '\n';
+      fullText += '\n'; // pagina scheiding
+    }
+    return fullText;
+  }
+
+  /* ── SCAN START ── */
+  async function startScan() {
+    const text = document.getElementById('wine-text').value.trim();
+    const fileInput = document.getElementById('file-input');
+    const file = selectedFile || (fileInput.files.length > 0 ? fileInput.files[0] : null);
+
+    if (!text && !file) {
+      document.getElementById('wine-text').style.borderBottom = '2px solid var(--wine-light)';
+      document.getElementById('wine-text').focus();
+      return;
+    }
+
+    scannedRestaurant = document.getElementById('restaurant-name').value.trim() || 'Restaurant';
+    document.getElementById('upload-section').style.display = 'none';
+    document.getElementById('processing').classList.add('active');
+
+    let scanText = text;
+
+    // Als er een bestand is — PDF uitlezen
+    if (file && !text) {
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      if (isPdf) {
+        try {
+          document.getElementById('proc-title').textContent = lang === 'nl' ? 'PDF wordt uitgelezen…' : 'Reading PDF…';
+          scanText = await extractPdfText(file);
+        } catch (e) {
+          console.error('PDF error:', e);
+          document.getElementById('processing').classList.remove('active');
+          document.getElementById('upload-section').style.display = 'block';
+          alert(lang === 'nl'
+            ? 'Kon de PDF niet uitlezen. Probeer de tekst te kopiëren en te plakken in het tekstveld.'
+            : 'Could not read the PDF. Try copying the text and pasting it in the text field.');
+          return;
+        }
+      }
+    }
+
+    runScan(scanText);
+  }
+
+  /* ── ECHTE SCAN MET SUPABASE ── */
+  async function runScan(text) {
+    const steps = ['step-1','step-2','step-3','step-4'];
+    const fill = document.getElementById('progress-fill');
+
+    const setStep = (i) => {
+      if (i > 0) {
+        document.getElementById(steps[i-1]).classList.remove('active');
+        document.getElementById(steps[i-1]).classList.add('done');
+        document.getElementById(steps[i-1]+'-ind').textContent = '✓';
+      }
+      document.getElementById(steps[i]).classList.add('active');
+    };
+
+    try {
+      // Stap 1 — tekst lezen
+      setStep(0);
+      fill.style.width = '15%';
+      await delay(400);
+
+      // Stap 2 — wijnen identificeren via AI (of regex als fallback)
+      setStep(1);
+      fill.style.width = '35%';
+
+      let parsed = [];
+
+      if (RAILWAY_URL) {
+        // AI parsing via Railway
+        try {
+          const aiRes = await fetch(`${RAILWAY_URL}/scan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, restaurant: scannedRestaurant })
+          });
+          if (!aiRes.ok) throw new Error(`Railway error: ${aiRes.status}`);
+          const aiData = await aiRes.json();
+          // Zet AI output om naar hetzelfde formaat als de regex parser
+          parsed = aiData.wines.map(w => ({
+            name: w.name,
+            producer: w.producer,
+            vintage: w.vintage,
+            listPrice: w.price,
+            isNV: !w.vintage,
+            bottleLabel: w.bottle_format || null,
+            bottleFactor: w.bottle_format ? (w.bottle_format.includes('½') ? 0.5 : w.bottle_format.toLowerCase().includes('magnum') ? 2 : 1) : 1,
+            raw: `${w.producer} ${w.name} ${w.vintage || 'NV'} €${w.price}`
+          }));
+        } catch (aiErr) {
+          console.warn('AI scan mislukt, val terug op regex:', aiErr.message);
+          parsed = parseWineText(text);
+        }
+      } else {
+        // Regex parser (fallback / ontwikkelmode)
+        parsed = parseWineText(text);
+      }
+
+      await delay(300);
+
+      if (parsed.length === 0) {
+        document.getElementById('processing').classList.remove('active');
+        document.getElementById('upload-section').style.display = 'block';
+        alert(lang === 'nl'
+          ? 'Geen wijnen herkend. Elk wijn moet een prijs bevatten (bijv. "Barolo, Ceretto 2019 — €65")'
+          : 'No wines detected. Each wine needs a price (e.g. "Barolo, Ceretto 2019 — €65")');
+        return;
+      }
+
+      // Stap 3 — alle wijnen PARALLEL matchen in Supabase
+      setStep(2);
+      fill.style.width = '65%';
+
+      // Parallel in batches van 15
+      const BATCH = 15;
+      const allMatches = [];
+      for (let i = 0; i < parsed.length; i += BATCH) {
+        const batch = parsed.slice(i, i + BATCH);
+        const results = await Promise.all(batch.map(w => matchWine(w)));
+        results.forEach((db, j) => allMatches.push({ parsed: batch[j], db }));
+        fill.style.width = (65 + Math.round((i / parsed.length) * 25)) + '%';
+      }
+      await delay(200);
+
+      // Stap 4 — scores berekenen
+      setStep(3);
+      fill.style.width = '95%';
+      await delay(300);
+
+      // Resultaten bouwen
+      scanResults = allMatches.map(({ parsed: p, db }) => {
+        const marketPrice = db ? db.market_price_eur : null;
+        const isStandardBottle = !p.bottleLabel;
+        const score = (db && isStandardBottle && marketPrice) ? calculateScore(p.listPrice, marketPrice) : null;
+        const isMatched = !!db && isStandardBottle && !!marketPrice;
+
+        return {
+          // Altijd de AI-geparsede naam tonen — NOOIT een andere wijn uit de database
+          // De database levert alleen marktprijs, regio en kleur bij
+          name: p.name,
+          producer: p.producer,
+          vintage: p.vintage,
+          region: isMatched ? [db.region, db.country].filter(Boolean).join(' · ') : '',
+          type: isMatched ? db.colour : 'red',
+          listPrice: p.listPrice,
+          marketPrice: isStandardBottle ? marketPrice : null,
+          score: score ?? 50,
+          matched: isMatched,
+          criticScore: isMatched ? db?.critic_score : null,
+          rawName: p.name,
+          rawProducer: p.producer,
+          bottleLabel: p.bottleLabel
+        };
+      });
+      });
+
+      // Niet-herkende wijnen opslaan als pending in Supabase
+      const unmatched = allMatches.filter(({ db, parsed: p }) =>
+        !db && p.name && p.name.length > 3 && p.producer && p.producer.length > 2
+      );
+      if (unmatched.length > 0) {
+        savePendingWines(unmatched.map(({ parsed: p }) => p), scannedRestaurant);
+      }
+
+      // Klaar
+      document.getElementById(steps[3]).classList.remove('active');
+      document.getElementById(steps[3]).classList.add('done');
+      document.getElementById(steps[3]+'-ind').textContent = '✓';
+      fill.style.width = '100%';
+      await delay(300);
+
+      document.getElementById('processing').classList.remove('active');
+      showResults();
+
+    } catch (err) {
+      console.error('Scan error:', err);
+      document.getElementById('processing').classList.remove('active');
+      document.getElementById('upload-section').style.display = 'block';
+      alert(lang === 'nl'
+        ? 'Er ging iets mis. Controleer je verbinding en probeer opnieuw.'
+        : 'Something went wrong. Check your connection and try again.');
+    }
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  /* ── PENDING WIJNEN OPSLAAN ── */
+  async function savePendingWines(parsedWines, restaurant) {
+    // Sla niet-herkende wijnen op als pending — maar controleer eerst of ze al bestaan
+    for (const p of parsedWines) {
+      try {
+        // Check of er al een pending entry is met dezelfde naam + producent
+        const existing = await querySupabase('wines',
+          `?price_source=eq.pending&name=ilike.*${encodeURIComponent(p.name.slice(0,20))}*&producer=ilike.*${encodeURIComponent(p.producer.split(' ')[0])}*&limit=1&select=id,seen_count`);
+
+        if (existing.length > 0) {
+          // Al bekend — update de teller en restaurantnaam
+          await fetch(`${SUPABASE_URL}/rest/v1/wines?id=eq.${existing[0].id}`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              seen_count: (existing[0].seen_count || 1) + 1,
+              seen_list_price: p.listPrice,
+              seen_at_restaurant: restaurant
+            })
+          });
+        } else {
+          // Nieuw — toevoegen als pending
+          await fetch(`${SUPABASE_URL}/rest/v1/wines`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              name: p.name,
+              producer: p.producer,
+              vintage: p.vintage || null,
+              colour: 'red', // default, admin kan aanpassen
+              country: 'France', // default
+              price_source: 'pending',
+              seen_list_price: p.listPrice,
+              seen_at_restaurant: restaurant,
+              seen_count: 1
+            })
+          });
+        }
+      } catch (e) {
+        console.warn('Kon pending wijn niet opslaan:', p.name, e);
+      }
+    }
+  }
+
+  function showError() {
+    document.getElementById('upload-section').style.display = 'block';
+    alert(lang === 'nl'
+      ? 'Er ging iets mis met de scan. Controleer je verbinding en probeer opnieuw.'
+      : 'Something went wrong with the scan. Please check your connection and try again.');
+  }
+
+  /* ── RESULTATEN TONEN ── */
+  function showResults() {
+    const steals = scanResults.filter(w => w.score >= 60 && w.matched);
+    const matched = scanResults.filter(w => w.matched);
+    const scores = matched.map(w => w.score).filter(s => s !== null);
+    const bestScore = scores.length ? Math.max(...scores) : '—';
+
+    document.getElementById('stat-total').textContent = scanResults.length;
+    document.getElementById('stat-steals').textContent = steals.length;
+    document.getElementById('stat-best').textContent = bestScore;
+    document.getElementById('results-list-title').textContent = scannedRestaurant;
+    document.getElementById('results-meta').textContent =
+      `${scanResults.length} wines · ${matched.length} matched · ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})}`;
+
+    renderRows(scanResults);
+    document.getElementById('results').classList.add('active');
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Notitie aanpassen
+    const note = document.getElementById('results-note-text');
+    const unmatched = scanResults.filter(w => !w.matched).length;
+    if (unmatched > 0) {
+      note.innerHTML = `<strong>${unmatched} ${lang === 'nl' ? 'wijn(en) niet herkend' : 'wine(s) not recognised'}</strong> — ${lang === 'nl' ? 'deze staan nog niet in onze database. We voegen continu wijnen toe.' : 'these are not yet in our database. We are continuously adding wines.'}`;
+    } else {
+      note.innerHTML = lang === 'nl'
+        ? 'Alle wijnen herkend en vergeleken met actuele marktprijzen.'
+        : 'All wines recognised and compared against current market prices.';
+    }
+  }
+
+  /* ── RIJEN RENDEREN ── */
+  function renderRows(wines) {
+    const c = t[lang];
+    const container = document.getElementById('results-rows');
+    const sorted = [...wines].sort((a,b) => b.score - a.score);
+
+    container.innerHTML = sorted.map(w => {
+      const isSteal = w.score >= 60 && w.matched;
+      const cheaper = w.marketPrice && w.marketPrice > w.listPrice;
+      const diff = cheaper ? Math.round(w.marketPrice - w.listPrice) : 0;
+      const scoreClass = w.score >= 70 ? 'high' : w.score >= 40 ? 'mid' : 'low';
+      const regionStr = [w.producer, w.vintage, w.region].filter(Boolean).join(' · ');
+
+      return `
+        <div class="result-row ${isSteal ? 'steal' : ''}" data-type="${w.type || 'red'}">
+          <div class="steal-indicator ${isSteal ? 'yes' : 'no'}"></div>
+          <div class="result-name">
+            <div class="result-wine">${w.name}</div>
+            <div class="result-region">${regionStr}</div>
+            ${isSteal ? `<span class="steal-badge-sm">${lang === 'nl' ? 'Steal' : 'Steal'}</span>` : ''}
+            ${w.bottleLabel ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--gold);background:rgba(201,168,76,0.12);padding:1px 6px;border-radius:1px;letter-spacing:0.06em;">${w.bottleLabel}</span>` : ''}
+            ${!w.matched && !w.bottleLabel ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);letter-spacing:0.06em;">${lang==='nl'?'niet herkend':'not recognised'}</span>` : ''}
+          </div>
+          <div class="result-prices">
+            <div class="result-list-price">€${w.listPrice}</div>
+            ${w.bottleLabel
+              ? `<div class="result-market-price" style="color:var(--muted);font-style:italic;">${lang==='nl'?'geen vergelijking':'no comparison'}</div>`
+              : w.marketPrice
+                ? `<div class="result-market-price ${cheaper ? 'cheaper' : ''}">${c.market} ~€${w.marketPrice}${cheaper ? ` (€${diff} ${lang==='nl'?'goedkoper':'cheaper'})` : ''}</div>`
+                : `<div class="result-market-price" style="color:var(--muted);font-style:italic;">—</div>`
+            }
+          </div>
+          ${w.bottleLabel
+            ? `<div class="score-bubble low" style="opacity:0.35;">—</div>`
+            : w.matched
+              ? `<div class="score-bubble ${scoreClass}">${w.score}</div>`
+              : `<div class="score-bubble low">?</div>`
+          }
+        </div>
+      `;
+    }).join('');
+  }
+
+  /* ── FILTERS ── */
+  function filterResults(type, btn) {
+    currentFilter = type;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filtered = type === 'all' ? scanResults
+      : type === 'steals' ? scanResults.filter(w => w.score >= 60 && w.matched)
+      : scanResults.filter(w => (w.type || 'red') === type);
+    renderRows(filtered);
+  }
+
+  /* ── RESET ── */
+  function resetScan() {
+    scanResults = [];
+    selectedFile = null;
+    document.getElementById('upload-section').style.display = 'block';
+    document.getElementById('results').classList.remove('active');
+    document.getElementById('processing').classList.remove('active');
+    document.getElementById('wine-text').value = '';
+    document.getElementById('restaurant-name').value = '';
+    document.getElementById('file-input').value = '';
+    document.getElementById('progress-fill').style.width = '0%';
+    ['step-1','step-2','step-3','step-4'].forEach(id => {
+      document.getElementById(id).classList.remove('active','done');
+      document.getElementById(id+'-ind').textContent = id.split('-')[1];
+    });
+    renderLang();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ── INIT ── */
+  renderLang();
+</script>
+</body>
+</html>

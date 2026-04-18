@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cookie Policy — WineSteals</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --wine: #7B1C2E; --wine-dark: #4A0F1C; --gold: #C9A84C;
+      --cream: #F8F4EE; --ink: #1A1208; --muted: #6B5E52;
+      --border: rgba(123,28,46,0.12);
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); }
+
+    .nav { display:flex; align-items:center; justify-content:space-between; padding:1.1rem 2.5rem; border-bottom:0.5px solid var(--border); background:var(--cream); }
+    .logo { font-family:'Playfair Display',serif; font-size:1.35rem; font-weight:700; color:var(--wine-dark); display:flex; align-items:center; gap:8px; text-decoration:none; }
+    .logo-dot { width:7px; height:7px; background:var(--gold); border-radius:50%; }
+    .nav-right { display:flex; align-items:center; gap:1rem; }
+    .back-link { font-family:'DM Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); text-decoration:none; }
+    .back-link:hover { color:var(--wine); }
+    .lang-toggle { display:flex; align-items:center; border:0.5px solid rgba(123,28,46,0.25); border-radius:2px; overflow:hidden; }
+    .lang-btn { padding:0.32rem 0.75rem; font-family:'DM Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; cursor:pointer; border:none; background:transparent; color:var(--muted); transition:all 0.2s; }
+    .lang-btn.active { background:var(--wine); color:var(--cream); }
+
+    .page-header { background:var(--wine-dark); padding:4rem 2.5rem; position:relative; overflow:hidden; }
+    .page-header::before { content:''; position:absolute; inset:0; opacity:0.03; background-image:repeating-linear-gradient(45deg,var(--gold) 0px,var(--gold) 1px,transparent 1px,transparent 40px); }
+    .page-header-inner { max-width:760px; margin:0 auto; position:relative; }
+    .page-eyebrow { font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold); margin-bottom:0.75rem; }
+    .page-title { font-family:'Playfair Display',serif; font-size:2.4rem; font-weight:700; color:#F8F4EE; line-height:1.1; margin-bottom:0.75rem; }
+    .page-date { font-family:'DM Mono',monospace; font-size:0.68rem; color:rgba(248,244,238,0.35); letter-spacing:0.1em; }
+
+    .content { max-width:760px; margin:0 auto; padding:4rem 2.5rem; }
+    .intro { font-size:1rem; color:var(--muted); font-weight:300; line-height:1.85; margin-bottom:3rem; padding-bottom:2rem; border-bottom:0.5px solid var(--border); }
+
+    /* PREFERENCE PANEL */
+    .pref-panel { background:white; border:0.5px solid var(--border); border-radius:3px; overflow:hidden; margin-bottom:3.5rem; }
+    .pref-header { background:var(--wine-dark); padding:1.25rem 1.5rem; }
+    .pref-header-title { font-family:'Playfair Display',serif; font-size:1.05rem; font-style:italic; color:#F8F4EE; margin-bottom:0.25rem; }
+    .pref-header-sub { font-size:0.78rem; color:rgba(248,244,238,0.45); font-weight:300; }
+    .pref-row { display:flex; align-items:center; justify-content:space-between; padding:1.25rem 1.5rem; border-bottom:0.5px solid var(--border); gap:1.5rem; }
+    .pref-row:last-child { border-bottom:none; }
+    .pref-info {}
+    .pref-name { font-size:0.92rem; font-weight:500; color:var(--ink); margin-bottom:0.25rem; }
+    .pref-desc { font-size:0.8rem; color:var(--muted); font-weight:300; line-height:1.6; }
+    .pref-control { flex-shrink:0; }
+    .toggle-wrap { position:relative; width:44px; height:24px; }
+    .toggle-wrap input { opacity:0; width:0; height:0; position:absolute; }
+    .toggle-slider { position:absolute; inset:0; background:rgba(123,28,46,0.15); border-radius:24px; cursor:pointer; transition:background 0.2s; }
+    .toggle-slider::before { content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:white; border-radius:50%; transition:transform 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.15); }
+    .toggle-wrap input:checked + .toggle-slider { background:var(--wine); }
+    .toggle-wrap input:checked + .toggle-slider::before { transform:translateX(20px); }
+    .toggle-wrap input:disabled + .toggle-slider { opacity:0.5; cursor:not-allowed; }
+    .always-on { font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold); background:rgba(201,168,76,0.12); padding:3px 8px; border-radius:1px; }
+    .pref-actions { padding:1.25rem 1.5rem; background:rgba(123,28,46,0.03); display:flex; gap:0.75rem; align-items:center; border-top:0.5px solid var(--border); }
+    .btn-save { background:var(--wine); color:#F8F4EE; border:none; padding:0.6rem 1.5rem; border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:500; cursor:pointer; transition:background 0.2s; }
+    .btn-save:hover { background:var(--wine-dark); }
+    .btn-accept-all { background:transparent; color:var(--wine); border:0.5px solid var(--wine); padding:0.6rem 1.25rem; border-radius:2px; font-family:'DM Sans',sans-serif; font-size:0.85rem; cursor:pointer; transition:all 0.2s; }
+    .btn-accept-all:hover { background:var(--wine); color:#F8F4EE; }
+    .save-confirm { font-family:'DM Mono',monospace; font-size:0.72rem; color:#2E7D32; letter-spacing:0.08em; display:none; }
+
+    .policy-section { margin-bottom:2.75rem; }
+    .policy-section h2 { font-family:'Playfair Display',serif; font-size:1.25rem; font-weight:700; color:var(--wine-dark); margin-bottom:0.85rem; padding-bottom:0.5rem; border-bottom:0.5px solid var(--border); }
+    .policy-section p { font-size:0.92rem; color:var(--muted); font-weight:300; line-height:1.85; margin-bottom:0.75rem; }
+    .cookie-table { width:100%; border-collapse:collapse; margin-top:0.75rem; font-size:0.85rem; }
+    .cookie-table th { text-align:left; font-family:'DM Mono',monospace; font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); padding:0.6rem 1rem 0.6rem 0; border-bottom:0.5px solid var(--border); font-weight:500; }
+    .cookie-table td { padding:0.75rem 1rem 0.75rem 0; border-bottom:0.5px solid rgba(123,28,46,0.06); color:var(--muted); font-weight:300; vertical-align:top; line-height:1.6; }
+    .cookie-table td:first-child { font-family:'DM Mono',monospace; font-size:0.78rem; color:var(--ink); }
+    .cookie-table tr:last-child td { border-bottom:none; }
+
+    .footer { padding:1.75rem 2.5rem; border-top:0.5px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-top:2rem; }
+    .footer-logo { font-family:'Playfair Display',serif; font-size:1rem; color:var(--wine-dark); font-weight:700; display:flex; align-items:center; gap:7px; }
+    .footer-links { display:flex; gap:1.5rem; list-style:none; }
+    .footer-links a { font-size:0.78rem; color:var(--muted); text-decoration:none; font-weight:300; }
+    .footer-links a:hover { color:var(--wine); }
+    .footer-copy { font-size:0.75rem; color:var(--muted); font-weight:300; }
+
+    .lang-section { display:none; }
+    .lang-section.active { display:block; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="logo"><div class="logo-dot"></div>WineSteals</a>
+  <div class="nav-right">
+    <a href="index.html" class="back-link" id="back-link">← Back</a>
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" id="btn-nl" onclick="setLang('nl')">NL</button>
+    </div>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div class="page-eyebrow" id="header-eyebrow">Legal</div>
+    <h1 class="page-title" id="header-title">Cookie Policy</h1>
+    <div class="page-date" id="header-date">Last updated: April 2026</div>
+  </div>
+</div>
+
+<!-- ENGLISH -->
+<div class="lang-section active" id="lang-en">
+  <div class="content">
+    <p class="intro">This page explains what cookies WineSteals uses, why we use them, and how you can control them. You can update your preferences at any time using the panel below.</p>
+
+    <!-- PREFERENCE PANEL -->
+    <div class="pref-panel">
+      <div class="pref-header">
+        <div class="pref-header-title">Your cookie preferences</div>
+        <div class="pref-header-sub">Choose which cookies you are happy to allow</div>
+      </div>
+      <div class="pref-row">
+        <div class="pref-info">
+          <div class="pref-name">Functional cookies</div>
+          <div class="pref-desc">Necessary for the site to work — remembering your language choice and cookie preferences. Cannot be disabled.</div>
+        </div>
+        <div class="pref-control"><span class="always-on">Always on</span></div>
+      </div>
+      <div class="pref-row">
+        <div class="pref-info">
+          <div class="pref-name">Analytics cookies</div>
+          <div class="pref-desc">Anonymised usage data via Google Analytics. Helps us understand how people use WineSteals so we can improve it.</div>
+        </div>
+        <div class="pref-control">
+          <label class="toggle-wrap">
+            <input type="checkbox" id="toggle-analytics" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="pref-row">
+        <div class="pref-info">
+          <div class="pref-name">Advertising cookies</div>
+          <div class="pref-desc">Used by Google AdSense to show relevant ads based on your interests. WineSteals is a free service supported by advertising.</div>
+        </div>
+        <div class="pref-control">
+          <label class="toggle-wrap">
+            <input type="checkbox" id="toggle-ads" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="pref-actions">
+        <button class="btn-save" onclick="savePrefs()">Save preferences</button>
+        <button class="btn-accept-all" onclick="acceptAll()">Accept all</button>
+        <span class="save-confirm" id="save-confirm">✓ Saved</span>
+      </div>
+    </div>
+
+    <div class="policy-section">
+      <h2>What are cookies?</h2>
+      <p>Cookies are small text files stored on your device when you visit a website. They help websites remember your preferences and understand how visitors use the site.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>Cookies we use</h2>
+      <table class="cookie-table">
+        <thead>
+          <tr><th>Cookie</th><th>Provider</th><th>Purpose</th><th>Duration</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>ws_cookie_consent</td><td>WineSteals</td><td>Stores your cookie consent choice</td><td>1 year</td></tr>
+          <tr><td>ws_lang</td><td>WineSteals</td><td>Remembers your language preference</td><td>1 year</td></tr>
+          <tr><td>_ga, _ga_*</td><td>Google Analytics</td><td>Anonymised site usage statistics</td><td>14 months</td></tr>
+          <tr><td>_gid</td><td>Google Analytics</td><td>Distinguishes users (anonymised)</td><td>24 hours</td></tr>
+          <tr><td>__gads, __gpi</td><td>Google AdSense</td><td>Ad personalisation and frequency</td><td>13 months</td></tr>
+          <tr><td>DSID, IDE</td><td>Google AdSense</td><td>Personalised advertising</td><td>13 months</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="policy-section">
+      <h2>Third-party cookies</h2>
+      <p>Google Analytics and Google AdSense are operated by Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Ireland. Google may transfer data to the United States under Standard Contractual Clauses. For more information, see <a href="https://policies.google.com/privacy" target="_blank" style="color:var(--wine);">Google's privacy policy</a>.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>How to control cookies</h2>
+      <p>In addition to the preference panel above, you can control cookies through your browser settings. Note that disabling all cookies may affect the functionality of this and other websites. Links to browser cookie settings:</p>
+      <p style="margin-top:0.75rem;">
+        <a href="https://support.google.com/chrome/answer/95647" target="_blank" style="color:var(--wine);">Chrome</a> ·
+        <a href="https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer" target="_blank" style="color:var(--wine);">Firefox</a> ·
+        <a href="https://support.apple.com/guide/safari/manage-cookies-sfri11471/mac" target="_blank" style="color:var(--wine);">Safari</a> ·
+        <a href="https://support.microsoft.com/en-us/microsoft-edge/delete-cookies-in-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09" target="_blank" style="color:var(--wine);">Edge</a>
+      </p>
+    </div>
+
+    <div class="policy-section">
+      <h2>Questions?</h2>
+      <p>Contact us at <a href="mailto:hello@winesteals.nl" style="color:var(--wine);">hello@winesteals.nl</a> — we respond within 30 days.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DUTCH -->
+<div class="lang-section" id="lang-nl">
+  <div class="content">
+    <p class="intro">Deze pagina legt uit welke cookies WineSteals gebruikt, waarom we ze gebruiken en hoe je ze kunt beheren. Je kunt je voorkeuren op elk moment bijwerken via het onderstaande paneel.</p>
+
+    <!-- PREFERENCE PANEL NL -->
+    <div class="pref-panel">
+      <div class="pref-header">
+        <div class="pref-header-title">Jouw cookievoorkeuren</div>
+        <div class="pref-header-sub">Kies welke cookies je toestaat</div>
+      </div>
+      <div class="pref-row">
+        <div class="pref-info">
+          <div class="pref-name">Functionele cookies</div>
+          <div class="pref-desc">Noodzakelijk voor het functioneren van de site — het onthouden van je taalvoorkeur en cookievoorkeuren. Kunnen niet worden uitgeschakeld.</div>
+        </div>
+        <div class="pref-control"><span class="always-on">Altijd aan</span></div>
+      </div>
+      <div class="pref-row">
+        <div class="pref-info">
+          <div class="pref-name">Analytische cookies</div>
+          <div class="pref-desc">Geanonimiseerde gebruiksgegevens via Google Analytics. Helpt ons begrijpen hoe mensen WineSteals gebruiken zodat we het kunnen verbeteren.</div>
+        </div>
+        <div class="pref-control">
+          <label class="toggle-wrap">
+            <input type="checkbox" id="toggle-analytics-nl" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="pref-row">
+        <div class="pref-info">
+          <div class="pref-name">Advertentiecookies</div>
+          <div class="pref-desc">Gebruikt door Google AdSense om relevante advertenties te tonen op basis van je interesses. WineSteals is een gratis dienst die wordt ondersteund door advertenties.</div>
+        </div>
+        <div class="pref-control">
+          <label class="toggle-wrap">
+            <input type="checkbox" id="toggle-ads-nl" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="pref-actions">
+        <button class="btn-save" onclick="savePrefs()">Voorkeuren opslaan</button>
+        <button class="btn-accept-all" onclick="acceptAll()">Alles accepteren</button>
+        <span class="save-confirm" id="save-confirm-nl">✓ Opgeslagen</span>
+      </div>
+    </div>
+
+    <div class="policy-section">
+      <h2>Wat zijn cookies?</h2>
+      <p>Cookies zijn kleine tekstbestanden die op je apparaat worden opgeslagen wanneer je een website bezoekt. Ze helpen websites jouw voorkeuren te onthouden en te begrijpen hoe bezoekers de site gebruiken.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>Cookies die wij gebruiken</h2>
+      <table class="cookie-table">
+        <thead>
+          <tr><th>Cookie</th><th>Aanbieder</th><th>Doel</th><th>Duur</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>ws_cookie_consent</td><td>WineSteals</td><td>Slaat je cookiekeuze op</td><td>1 jaar</td></tr>
+          <tr><td>ws_lang</td><td>WineSteals</td><td>Onthoudt je taalvoorkeur</td><td>1 jaar</td></tr>
+          <tr><td>_ga, _ga_*</td><td>Google Analytics</td><td>Geanonimiseerde gebruiksstatistieken</td><td>14 maanden</td></tr>
+          <tr><td>_gid</td><td>Google Analytics</td><td>Onderscheidt gebruikers (geanonimiseerd)</td><td>24 uur</td></tr>
+          <tr><td>__gads, __gpi</td><td>Google AdSense</td><td>Advertentiepersonalisatie en frequentie</td><td>13 maanden</td></tr>
+          <tr><td>DSID, IDE</td><td>Google AdSense</td><td>Gepersonaliseerde advertenties</td><td>13 maanden</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="policy-section">
+      <h2>Cookies van derden</h2>
+      <p>Google Analytics en Google AdSense worden beheerd door Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Ierland. Google kan gegevens overdragen naar de Verenigde Staten onder Standaard Contractuele Clausules. Zie <a href="https://policies.google.com/privacy" target="_blank" style="color:var(--wine);">het privacybeleid van Google</a> voor meer informatie.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>Hoe je cookies kunt beheren</h2>
+      <p>Naast het bovenstaande voorkeurenpaneel kun je cookies beheren via je browserinstellingen. Let op: het uitschakelen van alle cookies kan de werking van deze en andere websites beïnvloeden.</p>
+      <p style="margin-top:0.75rem;">
+        <a href="https://support.google.com/chrome/answer/95647" target="_blank" style="color:var(--wine);">Chrome</a> ·
+        <a href="https://support.mozilla.org/nl/kb/cookies-verwijderen-gegevens-wissen-websites-opgeslagen" target="_blank" style="color:var(--wine);">Firefox</a> ·
+        <a href="https://support.apple.com/nl-nl/guide/safari/sfri11471/mac" target="_blank" style="color:var(--wine);">Safari</a> ·
+        <a href="https://support.microsoft.com/nl-nl/microsoft-edge/cookies-verwijderen-in-microsoft-edge-63947406" target="_blank" style="color:var(--wine);">Edge</a>
+      </p>
+    </div>
+
+    <div class="policy-section">
+      <h2>Vragen?</h2>
+      <p>Neem contact op via <a href="mailto:hello@winesteals.nl" style="color:var(--wine);">hello@winesteals.nl</a> — we reageren binnen 30 dagen.</p>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-logo"><div class="logo-dot"></div>WineSteals</div>
+  <ul class="footer-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="privacy.html" id="footer-privacy-link">Privacy policy</a></li>
+    <li><a href="mailto:hello@winesteals.nl">hello@winesteals.nl</a></li>
+  </ul>
+  <div class="footer-copy">© 2026 WineSteals.nl</div>
+</footer>
+
+<script>
+  let lang = 'en';
+  const labels = {
+    en: { eyebrow:'Legal', title:'Cookie Policy', date:'Last updated: April 2026', back:'← Back', privacyLink:'Privacy policy' },
+    nl: { eyebrow:'Juridisch', title:'Cookiebeleid', date:'Laatst bijgewerkt: april 2026', back:'← Terug', privacyLink:'Privacybeleid' }
+  };
+
+  function setLang(l) {
+    lang = l;
+    document.getElementById('btn-en').classList.toggle('active', l==='en');
+    document.getElementById('btn-nl').classList.toggle('active', l==='nl');
+    document.getElementById('lang-en').classList.toggle('active', l==='en');
+    document.getElementById('lang-nl').classList.toggle('active', l==='nl');
+    const lb = labels[l];
+    document.getElementById('header-eyebrow').textContent = lb.eyebrow;
+    document.getElementById('header-title').textContent = lb.title;
+    document.getElementById('header-date').textContent = lb.date;
+    document.getElementById('back-link').textContent = lb.back;
+    document.getElementById('footer-privacy-link').textContent = lb.privacyLink;
+    document.documentElement.lang = l;
+  }
+
+  function loadPrefs() {
+    const consent = localStorage.getItem('ws_cookie_consent');
+    const isAll = consent === 'all';
+    ['toggle-analytics','toggle-analytics-nl'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.checked = isAll;
+    });
+    ['toggle-ads','toggle-ads-nl'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.checked = isAll;
+    });
+  }
+
+  function savePrefs() {
+    const analytics = document.getElementById('toggle-analytics').checked ||
+                      document.getElementById('toggle-analytics-nl').checked;
+    const ads = document.getElementById('toggle-ads').checked ||
+                document.getElementById('toggle-ads-nl').checked;
+    const level = (analytics && ads) ? 'all' : (analytics ? 'analytics' : 'functional');
+    localStorage.setItem('ws_cookie_consent', level);
+    localStorage.setItem('ws_cookie_date', new Date().toISOString());
+    ['save-confirm','save-confirm-nl'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.style.display = 'inline'; setTimeout(() => el.style.display = 'none', 2500); }
+    });
+  }
+
+  function acceptAll() {
+    ['toggle-analytics','toggle-analytics-nl','toggle-ads','toggle-ads-nl'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.checked = true;
+    });
+    savePrefs();
+  }
+
+  loadPrefs();
+</script>
+</body>
+</html>
