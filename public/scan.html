@@ -976,8 +976,6 @@ Chambolle-Musigny, Drouhin 2018 — €88"></textarea>
           bottleLabel: p.bottleLabel
         };
       });
-      });
-
       // Niet-herkende wijnen opslaan als pending in Supabase
       const unmatched = allMatches.filter(({ db, parsed: p }) =>
         !db && p.name && p.name.length > 3 && p.producer && p.producer.length > 2
