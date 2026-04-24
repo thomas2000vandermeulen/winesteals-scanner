@@ -437,6 +437,7 @@
     try {
       await sb(`wines?id=eq.${id}`, {
         method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
           market_price_eur: price,
           market_price_min: Math.round(price * 0.80),
