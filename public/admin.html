@@ -490,7 +490,7 @@
   /* ── LOAD WINES ── */
   async function loadWines() {
     try {
-      const wines = await sb('wines?price_source=neq.pending&select=id,name,producer,vintage,region,country,colour,market_price_eur&order=created_at.desc&limit=500');
+      const wines = await sb('wines?price_source=neq.pending&select=id,name,producer,vintage,region,country,colour,market_price_eur&order=created_at.desc&limit=10000');
       allWines = wines;
       updateStats(wines);
       renderTable(wines);
