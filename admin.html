@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WineSteals Admin — Database beheer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --wine: #7B1C2E; --wine-dark: #4A0F1C; --gold: #C9A84C;
+      --cream: #F8F4EE; --ink: #1A1208; --muted: #6B5E52;
+      --border: rgba(123,28,46,0.12); --green: #2E7D32; --red: #C62828;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
+
+    /* LOGIN */
+    .login-overlay { position: fixed; inset: 0; background: var(--wine-dark); z-index: 999; display: flex; align-items: center; justify-content: center; }
+    .login-overlay.hidden { display: none; }
+    .login-box { background: var(--cream); padding: 48px 40px; border-radius: 12px; width: 360px; text-align: center; }
+    .login-box h1 { font-family: 'Playfair Display', serif; color: var(--wine-dark); margin-bottom: 8px; }
+    .login-box p { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+    .login-box input { width: 100%; padding: 12px 16px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 15px; margin-bottom: 16px; background: white; }
+    .login-box button { width: 100%; padding: 12px; background: var(--wine); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; }
+
+    /* LAYOUT */
+    .header { background: var(--wine-dark); color: white; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { font-family: 'Playfair Display', serif; font-size: 20px; }
+    .header .stats { display: flex; gap: 24px; font-size: 13px; opacity: 0.8; }
+    .header .stats span { display: flex; align-items: center; gap: 6px; }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px 32px; }
+
+    /* TABS */
+    .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 2px solid var(--border); }
+    .tab-btn { padding: 10px 20px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+    .tab-btn.active { color: var(--wine); border-bottom-color: var(--wine); }
+
+    /* SEARCH + FILTERS */
+    .toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+    .toolbar input, .toolbar select { padding: 9px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: white; }
+    .toolbar input { flex: 1; min-width: 200px; }
+    .btn { padding: 9px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; }
+    .btn-primary { background: var(--wine); color: white; }
+    .btn-primary:hover { background: var(--wine-dark); }
+    .btn-secondary { background: white; color: var(--wine); border: 1.5px solid var(--wine); }
+    .btn-small { padding: 5px 12px; font-size: 12px; }
+    .btn-danger { background: var(--red); color: white; }
+    .btn-success { background: var(--green); color: white; }
+
+    /* WINE TABLE */
+    .wine-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .wine-table th { text-align: left; padding: 10px 12px; background: var(--wine-dark); color: white; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .wine-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .wine-table tr:hover td { background: rgba(123,28,46,0.03); }
+    .wine-table input[type="number"] { width: 80px; padding: 5px 8px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 13px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+    .badge-red { background: rgba(123,28,46,0.1); color: var(--wine); }
+    .badge-white { background: rgba(201,168,76,0.15); color: #7a6020; }
+    .badge-sparkling { background: rgba(100,149,237,0.15); color: #3b5998; }
+    .badge-fortified { background: rgba(139,90,43,0.15); color: #6b4423; }
+    .badge-rosé { background: rgba(255,105,180,0.15); color: #c2185b; }
+
+    /* VINTAGE PRICES PANEL */
+    .vintage-panel { background: rgba(123,28,46,0.04); border: 1px solid var(--border); border-radius: 8px; margin-top: 8px; padding: 16px; }
+    .vintage-panel h4 { font-size: 13px; font-weight: 600; color: var(--wine-dark); margin-bottom: 12px; }
+    .vintage-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+    .vintage-row label { font-size: 12px; color: var(--muted); min-width: 60px; }
+    .vintage-row input { width: 90px; padding: 5px 8px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 13px; }
+    .vintage-row .delete-vintage { color: var(--red); background: none; border: none; cursor: pointer; font-size: 16px; padding: 2px 6px; }
+    .add-vintage-row { display: flex; gap: 10px; align-items: center; padding-top: 8px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+
+    /* EMPTY STATE */
+    .empty { text-align: center; padding: 60px; color: var(--muted); }
+    .empty h3 { font-size: 18px; margin-bottom: 8px; }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; color: white; z-index: 9999; opacity: 0; transform: translateY(12px); transition: all 0.25s; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: var(--green); }
+    .toast.error { background: var(--red); }
+
+    /* EXPANDABLE ROW */
+    .expand-btn { background: none; border: none; cursor: pointer; color: var(--wine); font-size: 16px; padding: 0 4px; }
+    .expanded-row td { padding: 0; }
+    .expanded-row .vintage-panel { border-radius: 0; border-left: 4px solid var(--wine); margin: 0; }
+  </style>
+</head>
+<body>
+
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <h1>WineSteals</h1>
+    <p>Admin toegang vereist</p>
+    <input type="password" id="pw-input" placeholder="Wachtwoord" onkeydown="if(event.key==='Enter')checkPassword()" />
+    <button onclick="checkPassword()">Inloggen</button>
+  </div>
+</div>
+
+<div class="header">
+  <h1>🍷 WineSteals Admin</h1>
+  <div class="stats">
+    <span>📦 <strong id="stat-total">–</strong> wijnen</span>
+    <span>⏳ <strong id="stat-pending">–</strong> pending</span>
+    <span>✅ <strong id="stat-priced">–</strong> met prijs</span>
+    <span>🏷️ <strong id="stat-vintages">–</strong> vintage prijzen</span>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('priced')">Met prijs</button>
+    <button class="tab-btn" onclick="switchTab('pending')">Pending</button>
+    <button class="tab-btn" onclick="switchTab('add')">+ Wijn toevoegen</button>
+  </div>
+
+  <!-- PRICED TAB -->
+  <div id="tab-priced">
+    <div class="toolbar">
+      <input type="text" id="search-priced" placeholder="Zoek op naam, producent, regio..." oninput="filterWines()" />
+      <select id="filter-colour" onchange="filterWines()">
+        <option value="">Alle kleuren</option>
+        <option value="red">Rood</option>
+        <option value="white">Wit</option>
+        <option value="sparkling">Mousseux</option>
+        <option value="rosé">Rosé</option>
+        <option value="fortified">Versterkt</option>
+      </select>
+      <button class="btn btn-secondary btn-small" onclick="loadWines()">↻ Vernieuwen</button>
+    </div>
+    <div id="wines-container">
+      <div class="empty"><h3>Laden...</h3></div>
+    </div>
+  </div>
+
+  <!-- PENDING TAB -->
+  <div id="tab-pending" style="display:none">
+    <div class="toolbar">
+      <input type="text" id="search-pending" placeholder="Zoek pending wijnen..." oninput="filterPending()" />
+      <button class="btn btn-secondary btn-small" onclick="loadPending()">↻ Vernieuwen</button>
+    </div>
+    <div id="pending-container">
+      <div class="empty"><h3>Laden...</h3></div>
+    </div>
+  </div>
+
+  <!-- ADD TAB -->
+  <div id="tab-add" style="display:none">
+    <div style="max-width:600px">
+      <h3 style="font-family:'Playfair Display',serif; margin-bottom:20px; color:var(--wine-dark)">Nieuwe wijn toevoegen</h3>
+      <div style="display:grid; gap:14px">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px">
+          <div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Naam *</label><input id="f-name" type="text" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px" placeholder="bijv. Barolo Riserva"></div>
+          <div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Producent *</label><input id="f-producer" type="text" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px" placeholder="bijv. Ceretto"></div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px">
+          <div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Jaargang</label><input id="f-vintage" type="number" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px" placeholder="2019"></div>
+          <div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Kleur *</label>
+            <select id="f-colour" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px">
+              <option value="red">Rood</option><option value="white">Wit</option><option value="sparkling">Mousseux</option><option value="rosé">Rosé</option><option value="fortified">Versterkt</option>
+            </select>
+          </div>
+          <div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Marktprijs (€)</label><input id="f-price" type="number" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px" placeholder="65"></div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px">
+          <div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Regio</label><input id="f-region" type="text" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px" placeholder="bijv. Bordeaux"></div>
+          <div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Land</label><input id="f-country" type="text" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px" placeholder="bijv. France"></div>
+        </div>
+        <div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Appellation</label><input id="f-appellation" type="text" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px" placeholder="bijv. Barolo DOCG"></div>
+        <div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Druif</label><input id="f-grape" type="text" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px" placeholder="bijv. Nebbiolo"></div>
+        <button class="btn btn-primary" onclick="addWine()" style="justify-self:start;padding:12px 28px">Wijn toevoegen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
+  const ADMIN_PASSWORD = 'winesteals2026';
+  const SUPABASE_URL = 'https://kdhczlabjecqxlyuxprl.supabase.co';
+
+  let allWines = [], allPending = [], activeTab = 'priced', expandedRows = new Set();
+
+  // ── AUTH ──
+  function checkPassword() {
+    const pw = document.getElementById('pw-input').value;
+    if (pw === ADMIN_PASSWORD) {
+      localStorage.setItem('ws_admin_auth', btoa(ADMIN_PASSWORD));
+      document.getElementById('login-overlay').classList.add('hidden');
+      init();
+    } else {
+      document.getElementById('pw-input').style.borderColor = 'red';
+    }
+  }
+
+  // ── SUPABASE ──
+  async function sb(endpoint, method = 'GET', body = null) {
+    const headers = {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'GET' ? 'count=exact' : 'return=minimal'
+    };
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + endpoint, {
+      method, headers, body: body ? JSON.stringify(body) : null
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err || res.status);
+    }
+    if (method === 'GET') {
+      const data = await res.json();
+      return { data, count: parseInt(res.headers.get('content-range')?.split('/')[1]) || data.length };
+    }
+    return {};
+  }
+
+  // ── INIT ──
+  async function init() {
+    await Promise.all([loadWines(), loadPending(), loadStats()]);
+  }
+
+  async function loadStats() {
+    try {
+      const [total, pending, vintages] = await Promise.all([
+        sb('wines?select=count&price_source=neq.pending&limit=1&Range=0-0'),
+        sb('wines?select=count&price_source=eq.pending&limit=1&Range=0-0'),
+        sb('wine_vintage_prices?select=count&limit=1&Range=0-0'),
+      ]);
+      document.getElementById('stat-total').textContent = total.count || '?';
+      document.getElementById('stat-pending').textContent = pending.count || '?';
+      document.getElementById('stat-vintages').textContent = vintages.count || '?';
+    } catch(e) { console.warn('stats error', e.message); }
+  }
+
+  // ── WINES ──
+  async function loadWines() {
+    try {
+      const { data } = await sb('wines?price_source=neq.pending&order=name.asc&limit=10000&select=id,name,producer,vintage,region,country,colour,market_price_eur,price_source');
+      allWines = data;
+      document.getElementById('stat-priced').textContent = data.length;
+      filterWines();
+    } catch(e) { showToast('Fout: ' + e.message, 'error'); }
+  }
+
+  function filterWines() {
+    const q = document.getElementById('search-priced').value.toLowerCase();
+    const c = document.getElementById('filter-colour').value;
+    const filtered = allWines.filter(w => {
+      const match = !q || (w.name||'').toLowerCase().includes(q) || (w.producer||'').toLowerCase().includes(q) || (w.region||'').toLowerCase().includes(q);
+      const colMatch = !c || w.colour === c;
+      return match && colMatch;
+    });
+    renderWines(filtered);
+  }
+
+  function renderWines(wines) {
+    const container = document.getElementById('wines-container');
+    if (!wines.length) { container.innerHTML = '<div class="empty"><h3>Geen wijnen gevonden</h3></div>'; return; }
+
+    let html = `<table class="wine-table">
+      <thead><tr>
+        <th style="width:30px"></th>
+        <th>Naam</th><th>Producent</th><th>Kleur</th><th>Jaargang</th>
+        <th>Marktprijs</th><th>Bron</th><th>Acties</th>
+      </tr></thead><tbody>`;
+
+    for (const w of wines) {
+      const isExpanded = expandedRows.has(w.id);
+      html += `<tr>
+        <td><button class="expand-btn" onclick="toggleVintages('${w.id}', this)">${isExpanded ? '▼' : '▶'}</button></td>
+        <td><strong>${esc(w.name)}</strong></td>
+        <td style="color:var(--muted)">${esc(w.producer||'')}</td>
+        <td><span class="badge badge-${w.colour||'red'}">${w.colour||'?'}</span></td>
+        <td>${w.vintage||'NV'}</td>
+        <td><strong>€${w.market_price_eur||'—'}</strong></td>
+        <td style="font-size:11px;color:var(--muted)">${w.price_source||''}</td>
+        <td>
+          <button class="btn btn-small btn-primary" onclick="quickSavePrice('${w.id}', this)">💾 Prijs</button>
+          <input type="number" placeholder="€" style="width:70px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;margin-left:4px" id="price-${w.id}" value="${w.market_price_eur||''}">
+          <button class="btn btn-small btn-danger" onclick="deleteWine('${w.id}', this)" style="margin-left:4px">🗑</button>
+        </td>
+      </tr>`;
+      if (isExpanded) {
+        html += `<tr class="expanded-row"><td colspan="8"><div class="vintage-panel" id="vp-${w.id}"><p style="color:var(--muted);font-size:13px">Laden...</p></div></td></tr>`;
+      }
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+
+    // Load expanded vintage panels
+    for (const id of expandedRows) {
+      const panel = document.getElementById('vp-' + id);
+      if (panel) loadVintagePrices(id, panel);
+    }
+  }
+
+  // ── VINTAGE PRICES ──
+  async function toggleVintages(wineId, btn) {
+    if (expandedRows.has(wineId)) {
+      expandedRows.delete(wineId);
+      btn.textContent = '▶';
+    } else {
+      expandedRows.add(wineId);
+      btn.textContent = '▼';
+    }
+    filterWines();
+  }
+
+  async function loadVintagePrices(wineId, panel) {
+    try {
+      const { data } = await sb(`wine_vintage_prices?wine_id=eq.${wineId}&order=vintage.desc&limit=50&select=id,vintage,market_price_eur,market_price_min,market_price_max,price_source`);
+      renderVintagePanel(wineId, panel, data);
+    } catch(e) {
+      panel.innerHTML = `<p style="color:red;font-size:13px">Fout: ${e.message}</p>`;
+    }
+  }
+
+  function renderVintagePanel(wineId, panel, rows) {
+    let html = `<h4>🏷️ Jaargangprijzen</h4>`;
+
+    if (rows.length) {
+      html += `<div style="margin-bottom:12px">`;
+      for (const r of rows) {
+        html += `<div class="vintage-row" id="vrow-${r.id}">
+          <label><strong>${r.vintage}</strong></label>
+          <label>Markt €</label><input type="number" value="${r.market_price_eur||''}" id="vp-price-${r.id}" style="width:80px">
+          <label>Min €</label><input type="number" value="${r.market_price_min||''}" id="vp-min-${r.id}" style="width:80px">
+          <label>Max €</label><input type="number" value="${r.market_price_max||''}" id="vp-max-${r.id}" style="width:80px">
+          <button class="btn btn-small btn-success" onclick="saveVintagePrice('${r.id}', '${wineId}')">💾</button>
+          <button class="delete-vintage" onclick="deleteVintagePrice('${r.id}', '${wineId}')">✕</button>
+        </div>`;
+      }
+      html += `</div>`;
+    } else {
+      html += `<p style="font-size:13px;color:var(--muted);margin-bottom:12px">Nog geen jaargangprijzen.</p>`;
+    }
+
+    html += `<div class="add-vintage-row">
+      <label style="font-size:12px;color:var(--muted)">Toevoegen:</label>
+      <input type="number" placeholder="Jaargang" id="new-vintage-${wineId}" style="width:90px">
+      <label style="font-size:12px;color:var(--muted)">€</label>
+      <input type="number" placeholder="Marktprijs" id="new-price-${wineId}" style="width:90px">
+      <input type="number" placeholder="Min" id="new-min-${wineId}" style="width:80px">
+      <input type="number" placeholder="Max" id="new-max-${wineId}" style="width:80px">
+      <button class="btn btn-small btn-primary" onclick="addVintagePrice('${wineId}')">+ Toevoegen</button>
+    </div>`;
+
+    panel.innerHTML = html;
+  }
+
+  async function saveVintagePrice(rowId, wineId) {
+    const price = parseFloat(document.getElementById('vp-price-' + rowId)?.value);
+    const min = parseFloat(document.getElementById('vp-min-' + rowId)?.value) || null;
+    const max = parseFloat(document.getElementById('vp-max-' + rowId)?.value) || null;
+    if (!price) return showToast('Voer een prijs in', 'error');
+    try {
+      await sb(`wine_vintage_prices?id=eq.${rowId}`, 'PATCH', { market_price_eur: price, market_price_min: min, market_price_max: max, updated_at: new Date().toISOString() });
+      showToast('Prijs opgeslagen ✓', 'success');
+    } catch(e) { showToast('Fout: ' + e.message, 'error'); }
+  }
+
+  async function addVintagePrice(wineId) {
+    const vintage = parseInt(document.getElementById('new-vintage-' + wineId)?.value);
+    const price = parseFloat(document.getElementById('new-price-' + wineId)?.value);
+    const min = parseFloat(document.getElementById('new-min-' + wineId)?.value) || Math.round(price * 0.8 * 100) / 100;
+    const max = parseFloat(document.getElementById('new-max-' + wineId)?.value) || Math.round(price * 1.3 * 100) / 100;
+    if (!vintage || !price) return showToast('Jaargang en prijs zijn verplicht', 'error');
+    try {
+      await sb('wine_vintage_prices', 'POST', { wine_id: wineId, vintage, market_price_eur: price, market_price_min: min, market_price_max: max, price_source: 'manual' });
+      showToast('Jaargang toegevoegd ✓', 'success');
+      const panel = document.getElementById('vp-' + wineId);
+      if (panel) loadVintagePrices(wineId, panel);
+      loadStats();
+    } catch(e) { showToast('Fout: ' + e.message, 'error'); }
+  }
+
+  async function deleteVintagePrice(rowId, wineId) {
+    if (!confirm('Jaargang prijs verwijderen?')) return;
+    try {
+      await sb(`wine_vintage_prices?id=eq.${rowId}`, 'DELETE');
+      showToast('Verwijderd', 'success');
+      const panel = document.getElementById('vp-' + wineId);
+      if (panel) loadVintagePrices(wineId, panel);
+      loadStats();
+    } catch(e) { showToast('Fout: ' + e.message, 'error'); }
+  }
+
+  async function quickSavePrice(wineId, btn) {
+    const price = parseFloat(document.getElementById('price-' + wineId)?.value);
+    if (!price) return showToast('Voer een prijs in', 'error');
+    try {
+      await sb(`wines?id=eq.${wineId}`, 'PATCH', { market_price_eur: price, market_price_min: Math.round(price*0.8*100)/100, market_price_max: Math.round(price*1.3*100)/100, price_source: 'manual' });
+      showToast('Prijs opgeslagen ✓', 'success');
+      loadWines();
+    } catch(e) { showToast('Fout: ' + e.message, 'error'); }
+  }
+
+  async function deleteWine(id, btn) {
+    if (!confirm('Weet je zeker dat je deze wijn wilt verwijderen?')) return;
+    btn.textContent = '...';
+    try {
+      await sb(`wines?id=eq.${id}`, 'DELETE');
+      await loadWines();
+    } catch(e) { alert('Fout: ' + e.message); btn.textContent = '🗑'; }
+  }
+
+  // ── PENDING ──
+  async function loadPending() {
+    try {
+      const { data, count } = await sb('wines?price_source=eq.pending&order=name.asc&limit=10000&select=id,name,producer,vintage,region,country,colour,market_price_eur');
+      allPending = data;
+      document.getElementById('stat-pending').textContent = count;
+      filterPending();
+    } catch(e) { showToast('Fout: ' + e.message, 'error'); }
+  }
+
+  function filterPending() {
+    const q = document.getElementById('search-pending').value.toLowerCase();
+    const filtered = allPending.filter(w => !q || (w.name||'').toLowerCase().includes(q) || (w.producer||'').toLowerCase().includes(q));
+    renderPending(filtered);
+  }
+
+  function renderPending(wines) {
+    const container = document.getElementById('pending-container');
+    if (!wines.length) { container.innerHTML = '<div class="empty"><h3>Geen pending wijnen</h3></div>'; return; }
+
+    let html = `<table class="wine-table">
+      <thead><tr><th>Naam</th><th>Producent</th><th>Jaargang</th><th>Regio</th><th>Marktprijs instellen</th><th>Acties</th></tr></thead><tbody>`;
+    for (const w of wines) {
+      html += `<tr>
+        <td><strong>${esc(w.name)}</strong></td>
+        <td style="color:var(--muted)">${esc(w.producer||'')}</td>
+        <td>${w.vintage||'NV'}</td>
+        <td style="font-size:12px;color:var(--muted)">${esc(w.region||'')}${w.country?' · '+esc(w.country):''}</td>
+        <td>
+          <input type="number" placeholder="€ marktprijs" id="pp-${w.id}" style="width:110px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px">
+          <button class="btn btn-small btn-success" onclick="approvePending('${w.id}')" style="margin-left:6px">✓ Goedkeuren</button>
+        </td>
+        <td><button class="btn btn-small btn-danger" onclick="deleteWine('${w.id}', this)">🗑</button></td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  async function approvePending(id) {
+    const price = parseFloat(document.getElementById('pp-' + id)?.value);
+    if (!price) return showToast('Voer een marktprijs in', 'error');
+    try {
+      await sb(`wines?id=eq.${id}`, 'PATCH', {
+        market_price_eur: price,
+        market_price_min: Math.round(price*0.8*100)/100,
+        market_price_max: Math.round(price*1.3*100)/100,
+        price_source: 'manual'
+      });
+      showToast('Wijn goedgekeurd ✓', 'success');
+      await loadPending();
+      await loadStats();
+    } catch(e) { showToast('Fout: ' + e.message, 'error'); }
+  }
+
+  // ── ADD WINE ──
+  async function addWine() {
+    const name = document.getElementById('f-name').value.trim();
+    const producer = document.getElementById('f-producer').value.trim();
+    const vintage = parseInt(document.getElementById('f-vintage').value) || null;
+    const colour = document.getElementById('f-colour').value;
+    const price = parseFloat(document.getElementById('f-price').value) || null;
+    const region = document.getElementById('f-region').value.trim() || null;
+    const country = document.getElementById('f-country').value.trim() || null;
+    const appellation = document.getElementById('f-appellation').value.trim() || null;
+    const grape = document.getElementById('f-grape').value.trim() || null;
+
+    if (!name || !producer) return showToast('Naam en producent zijn verplicht', 'error');
+    try {
+      await sb('wines', 'POST', {
+        name, producer, vintage, colour, region, country, appellation, grape,
+        market_price_eur: price,
+        market_price_min: price ? Math.round(price*0.8*100)/100 : null,
+        market_price_max: price ? Math.round(price*1.3*100)/100 : null,
+        price_source: 'manual'
+      });
+      showToast('Wijn toegevoegd ✓', 'success');
+      ['f-name','f-producer','f-vintage','f-price','f-region','f-country','f-appellation','f-grape'].forEach(id => { document.getElementById(id).value = ''; });
+      await loadStats();
+    } catch(e) { showToast('Fout: ' + e.message, 'error'); }
+  }
+
+  // ── TABS ──
+  function switchTab(tab) {
+    activeTab = tab;
+    ['priced','pending','add'].forEach(t => {
+      document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+    });
+    document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+      btn.classList.toggle('active', ['priced','pending','add'][i] === tab);
+    });
+  }
+
+  // ── UTILS ──
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'toast ' + type + ' show';
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ── BOOT ──
+  if (localStorage.getItem('ws_admin_auth') === btoa(ADMIN_PASSWORD)) {
+    document.getElementById('login-overlay').classList.add('hidden');
+    init();
+  }
+</script>
+</body>
+</html>
