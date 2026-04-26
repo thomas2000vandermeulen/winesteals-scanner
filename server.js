@@ -15,62 +15,119 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const SUPABASE_URL = 'https://kdhczlabjecqxlyuxprl.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
 
-async function supabase(endpoint, params) {
-  const res = await fetch(SUPABASE_URL + '/rest/v1/' + endpoint + (params || ''), {
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': 'Bearer ' + SUPABASE_KEY,
-      'Content-Type': 'application/json'
-    }
+async function sbGet(endpoint) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
   });
-  if (!res.ok) throw new Error('Supabase ' + res.status);
+  if (!res.ok) throw new Error(`Supabase ${res.status}`);
   return res.json();
 }
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// ── NORMALIZE: verwijder accenten, stopwoorden, lowercase ──
+function normalize(s) {
+  if (!s) return '';
+  return s
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // accenten weg: é→e, ô→o
+    .replace(/\b(chateau|domaine|domain|maison|clos|les|la|le|de|du|des|d'|l'|et|and|von|van|del|della|di|dei|dei)\b/g, '')
+    .replace(/[''"`]/g, '')
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-async function matchWine(name, producer, vintage) {
-  const enc = s => encodeURIComponent(s.trim());
-  const nameParts = name.split(' ').filter(w => w.length > 2).slice(0, 4);
-  const producerParts = producer ? producer.split(' ').filter(w => w.length > 1) : [];
-  const producerFirst = producerParts[0] || '';
+// ── SCORE: hoe goed matcht wijn w met zoektermen? ──
+function scoreMatch(w, normName, normProducer, nameParts, producerParts) {
+  let score = 0;
+  const wn = normalize(w.name);
+  const wp = normalize(w.producer);
+  const aliases = (w.search_aliases || []).map(a => normalize(a));
 
-  function scoreMatch(w) {
-    let score = 0;
-    const wn = (w.name || '').toLowerCase(), wp = (w.producer || '').toLowerCase();
-    const pn = name.toLowerCase();
-    if (wn === pn) score += 10;
-    else if (wn.includes(pn) || pn.includes(wn)) score += 6;
-    else if (nameParts.some(p => p.length > 3 && wn.includes(p.toLowerCase()))) score += 2;
-    if (producerFirst) {
-      if (wp.includes(producerFirst.toLowerCase())) score += 8;
-      else if (producerParts[1] && wp.includes(producerParts[1].toLowerCase())) score += 4;
-      else score -= 15;
-    }
-    return score;
+  // Naam match
+  if (wn === normName) score += 20;
+  else if (wn.includes(normName) || normName.includes(wn)) score += 12;
+  else {
+    const hits = nameParts.filter(p => p.length > 2 && wn.includes(p));
+    score += hits.length * 3;
   }
 
-  try {
-    let candidates = [];
-    const fields = 'id,name,producer,vintage,region,country,colour';
+  // Alias match
+  for (const alias of aliases) {
+    if (alias === normName || alias.includes(normName) || normName.includes(alias)) {
+      score += 15;
+      break;
+    }
+    if (nameParts.some(p => p.length > 2 && alias.includes(p))) {
+      score += 8;
+      break;
+    }
+  }
 
-    if (producerFirst && nameParts.length) {
-      candidates = await supabase('wines', '?producer=ilike.*' + enc(producerFirst) + '*&name=ilike.*' + enc(nameParts[0]) + '*&limit=5&select=' + fields);
+  // Producent match
+  if (normProducer) {
+    if (wp === normProducer) score += 15;
+    else if (wp.includes(normProducer) || normProducer.includes(wp)) score += 10;
+    else {
+      const phits = producerParts.filter(p => p.length > 2 && wp.includes(p));
+      if (phits.length > 0) score += phits.length * 4;
+      else score -= 10; // verkeerde producent = grote penalty
     }
-    if (!candidates.length && producerFirst) {
-      const res = await supabase('wines', '?producer=ilike.*' + enc(producerFirst) + '*&limit=5&select=' + fields);
-      candidates = res.filter(w => nameParts.some(p => (w.name || '').toLowerCase().includes(p.toLowerCase())));
+  }
+
+  return score;
+}
+
+async function matchWine(name, producer, vintage) {
+  const normName = normalize(name);
+  const normProducer = normalize(producer);
+  const nameParts = normName.split(' ').filter(p => p.length > 2);
+  const producerParts = normProducer.split(' ').filter(p => p.length > 2);
+
+  // Bouw zoektermen — gebruik eerste betekenisvolle woorden
+  const nameKeyword = nameParts[0] || '';
+  const producerKeyword = producerParts[0] || '';
+
+  const enc = s => encodeURIComponent(s);
+  const fields = 'id,name,producer,vintage,region,country,colour,search_aliases';
+
+  let candidates = [];
+
+  try {
+    // Strategie 1: naam + producent
+    if (nameKeyword && producerKeyword) {
+      const r = await sbGet(`wines?name=ilike.*${enc(nameKeyword)}*&producer=ilike.*${enc(producerKeyword)}*&limit=8&select=${fields}`);
+      candidates.push(...r);
     }
-    if (!candidates.length && nameParts.length >= 2) {
-      candidates = await supabase('wines', '?name=ilike.*' + enc(nameParts.slice(0, 2).join(' ')) + '*&limit=5&select=' + fields);
+
+    // Strategie 2: alleen producent, filter op naam
+    if (candidates.length < 3 && producerKeyword) {
+      const r = await sbGet(`wines?producer=ilike.*${enc(producerKeyword)}*&limit=12&select=${fields}`);
+      candidates.push(...r);
     }
+
+    // Strategie 3: eerste twee naamwoorden
+    if (candidates.length < 3 && nameParts.length >= 2) {
+      const twoWords = encodeURIComponent(nameParts.slice(0, 2).join(' '));
+      const r = await sbGet(`wines?name=ilike.*${twoWords}*&limit=8&select=${fields}`);
+      candidates.push(...r);
+    }
+
+    // Strategie 4: alias search via tweede naamwoord (e.g. "Barolo" → vindt alle Barolo's)
+    if (candidates.length < 3 && nameKeyword) {
+      const r = await sbGet(`wines?name=ilike.*${enc(nameKeyword)}*&limit=10&select=${fields}`);
+      candidates.push(...r);
+    }
+
+    // Dedupliceer
+    const seen = new Set();
+    candidates = candidates.filter(w => { if (seen.has(w.id)) return false; seen.add(w.id); return true; });
+
     if (!candidates.length) return null;
 
-    let best = null, bestScore = 5;
+    // Scoor en kies beste match
+    let best = null, bestScore = 6; // minimum drempel
     for (const w of candidates) {
-      const s = scoreMatch(w);
+      const s = scoreMatch(w, normName, normProducer, nameParts, producerParts);
       if (s > bestScore) { bestScore = s; best = w; }
     }
     if (!best) return null;
@@ -78,33 +135,36 @@ async function matchWine(name, producer, vintage) {
     // Zoek vintage-specifieke prijs
     let priceData = null;
     if (vintage) {
-      const exact = await supabase('wine_vintage_prices', '?wine_id=eq.' + best.id + '&vintage=eq.' + vintage + '&limit=1&select=market_price_eur,market_price_min,market_price_max');
+      const exact = await sbGet(`wine_vintage_prices?wine_id=eq.${best.id}&vintage=eq.${vintage}&limit=1&select=market_price_eur,market_price_min,market_price_max`);
       if (exact.length > 0) {
         priceData = exact[0];
       } else {
-        const nearby = await supabase('wine_vintage_prices', '?wine_id=eq.' + best.id + '&vintage=gte.' + (vintage - 3) + '&vintage=lte.' + (vintage + 3) + '&order=vintage.desc&limit=1&select=market_price_eur,market_price_min,market_price_max');
+        // Dichtstbijzijnde jaargang ±3 jaar
+        const nearby = await sbGet(`wine_vintage_prices?wine_id=eq.${best.id}&vintage=gte.${vintage - 3}&vintage=lte.${vintage + 3}&order=vintage.desc&limit=1&select=market_price_eur,market_price_min,market_price_max`);
         if (nearby.length > 0) priceData = nearby[0];
       }
     }
 
-    // Fallback naar wines tabel
+    // Fallback: prijs uit wines tabel
     if (!priceData) {
-      const wineWithPrice = await supabase('wines', '?id=eq.' + best.id + '&select=market_price_eur,market_price_min,market_price_max');
-      if (wineWithPrice.length > 0 && wineWithPrice[0].market_price_eur) {
-        priceData = wineWithPrice[0];
-      }
+      const winePrice = await sbGet(`wines?id=eq.${best.id}&select=market_price_eur,market_price_min,market_price_max`);
+      if (winePrice.length > 0 && winePrice[0].market_price_eur) priceData = winePrice[0];
     }
 
-    return Object.assign({}, best, {
-      market_price_eur: priceData ? priceData.market_price_eur : null,
-      market_price_min: priceData ? priceData.market_price_min : null,
-      market_price_max: priceData ? priceData.market_price_max : null,
-    });
+    return {
+      ...best,
+      match_score: bestScore,
+      market_price_eur: priceData?.market_price_eur || null,
+      market_price_min: priceData?.market_price_min || null,
+      market_price_max: priceData?.market_price_max || null,
+    };
   } catch (e) {
     console.warn('matchWine error:', e.message);
     return null;
   }
 }
+
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 app.post('/scan', async (req, res) => {
   const { text, restaurant } = req.body;
@@ -117,19 +177,33 @@ app.post('/scan', async (req, res) => {
       max_tokens: 16000,
       messages: [{
         role: 'user',
-        content: 'Je bent een expert in het lezen van restaurantwijnkaarten. Extraheer ALLEEN de wijnen als JSON array.\n\nRegels:\n- Geef ALLEEN een JSON array terug, geen uitleg\n- Negeer sectieheaders, beschrijvingen, aperitief, cocktails, bier, water\n- Elke wijn: name, producer, vintage (null als NV), price (FLESPRIJS als getal), bottle_format (null tenzij magnum/halve fles)\n- Bij twee prijzen (glas + fles): gebruik ALTIJD de HOOGSTE = flesprijs\n- Als er ALLEEN een glasprijs staat zonder flesprijs: sla de wijn OVER\n- Geen duplicaten\n\nWijnkaart van ' + (restaurant || 'restaurant') + ':\n' + text + '\n\nGeef ALLEEN een JSON array:'
+        content: `Je bent een expert in het lezen van restaurantwijnkaarten. Extraheer ALLEEN de wijnen als JSON array.
+
+Regels:
+- Geef ALLEEN een JSON array terug, geen uitleg of markdown
+- Negeer: sectieheaders, beschrijvingen, cocktails, bier, water, aperitief
+- Elk object: name, producer, vintage (null als NV/geen jaargang), price (FLESPRIJS als getal), bottle_format (null tenzij magnum etc)
+- Bij twee prijzen (glas + fles): neem ALTIJD de hoogste = flesprijs
+- Alleen glasprijs zonder flesprijs: sla over
+- Geen duplicaten
+
+Wijnkaart van ${restaurant || 'restaurant'}:
+${text}
+
+JSON array:`
       }]
     });
 
     let raw = message.content[0].text.trim()
-      .replace(/^```jsons*/i, '').replace(/^```s*/i, '').replace(/```s*$/i, '').trim();
+      .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 
     let wines;
     try { wines = JSON.parse(raw); }
-    catch (e) { const m = raw.match(/[[sS]*]/); wines = m ? JSON.parse(m[0]) : []; }
+    catch { const m = raw.match(/\[[\s\S]*\]/); wines = m ? JSON.parse(m[0]) : []; }
 
+    // Filter en normaliseer
     wines = wines
-      .filter(w => w.price && w.price > 8 && w.price < 10000 && w.name && w.name.length > 1)
+      .filter(w => w.price && w.price > 8 && w.price < 10000 && w.name?.length > 1)
       .map(w => ({
         name: String(w.name || '').trim(),
         producer: String(w.producer || '').trim(),
@@ -138,29 +212,32 @@ app.post('/scan', async (req, res) => {
         bottle_format: w.bottle_format || null
       }));
 
+    // Dedupliceer
     const seen = new Set();
     wines = wines.filter(w => {
-      const key = (w.name + w.producer + w.vintage).toLowerCase();
+      const key = normalize(w.name + w.producer + (w.vintage || ''));
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
-    const BATCH = 10;
+    // Match in batches van 8
     const results = [];
-    for (let i = 0; i < wines.length; i += BATCH) {
-      const batch = wines.slice(i, i + BATCH);
+    for (let i = 0; i < wines.length; i += 8) {
+      const batch = wines.slice(i, i + 8);
       const matched = await Promise.all(batch.map(w => matchWine(w.name, w.producer, w.vintage)));
       batch.forEach((w, j) => {
         const db = matched[j];
-        results.push(Object.assign({}, w, {
-          matched: !!(db && db.market_price_eur),
+        results.push({
+          ...w,
+          matched: !!(db?.market_price_eur),
+          match_score: db?.match_score || 0,
           region: db ? [db.region, db.country].filter(Boolean).join(' · ') : null,
-          colour: db ? db.colour : null,
-          market_price_eur: db ? db.market_price_eur : null,
-          market_price_min: db ? db.market_price_min : null,
-          market_price_max: db ? db.market_price_max : null,
-        }));
+          colour: db?.colour || null,
+          market_price_eur: db?.market_price_eur || null,
+          market_price_min: db?.market_price_min || null,
+          market_price_max: db?.market_price_max || null,
+        });
       });
     }
 
@@ -178,4 +255,4 @@ app.post('/scan', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log('WineSteals server poort ' + PORT));
+app.listen(PORT, () => console.log(`WineSteals server poort ${PORT}`));
