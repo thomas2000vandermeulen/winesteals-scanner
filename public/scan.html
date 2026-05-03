@@ -316,7 +316,7 @@ async function runScan(text){
       const aiRes=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,restaurant:scannedRestaurant})});
       if(!aiRes.ok)throw new Error(`/scan ${aiRes.status}`);
       const aiData=await aiRes.json();
-      parsed=aiData.wines.map(w=>({name:w.name,producer:w.producer||'',vintage:w.vintage,listPrice:w.price,isNV:!w.vintage,bottleLabel:w.bottle_format||null,bottleFactor:1}));
+      parsed=aiData.wines.map(w=>({name:w.name,producer:w.producer||'',vintage:w.vintage,listPrice:w.price,isNV:!w.vintage,bottleLabel:w.bottle_format||null,bottleFactor:1,_db:{market_price_eur:w.market_price_eur,market_price_min:w.market_price_min,market_price_max:w.market_price_max,region:w.region,colour:w.colour}}));
     }catch(aiErr){
       console.warn('AI scan failed, using regex fallback:',aiErr.message);
       parsed=parseWineText(text);
@@ -331,14 +331,8 @@ async function runScan(text){
     }
 
     setStep(2);fill.style.width='65%';
-    const BATCH=15;
-    const allMatches=[];
-    for(let i=0;i<parsed.length;i+=BATCH){
-      const batch=parsed.slice(i,i+BATCH);
-      const results=await Promise.all(batch.map(w=>matchWine(w)));
-      results.forEach((db,j)=>allMatches.push({parsed:batch[j],db}));
-      fill.style.width=(65+Math.round((i/parsed.length)*25))+'%';
-    }
+    const allMatches=parsed.map(w=>({parsed:w,db:w._db&&w._db.market_price_eur?w._db:null}));
+    fill.style.width='90%';
     await delay(200);
 
     setStep(3);fill.style.width='95%';await delay(300);
