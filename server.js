@@ -19,11 +19,27 @@ async function sbGet(endpoint) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
   });
-  if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Supabase GET ${res.status}`);
   return res.json();
 }
 
-// Verwijder accenten, stopwoorden, lowercase
+async function sbPost(endpoint, body) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
+  , body: JSON.stringify(body) });
+  if (!res.ok) throw new Error(`Supabase POST ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+async function sbPatch(endpoint, body) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }
+  , body: JSON.stringify(body) });
+  if (!res.ok) throw new Error(`Supabase PATCH ${res.status}`);
+}
+
 function normalize(s) {
   if (!s) return '';
   return s.toLowerCase()
@@ -39,84 +55,57 @@ function scoreMatch(w, normName, normProducer, nameParts, producerParts) {
   const wp = normalize(w.producer);
   const aliases = (w.search_aliases || []).map(a => normalize(a));
 
-  // Naam score
   if (wn === normName) score += 20;
   else if (wn.includes(normName) || normName.includes(wn)) score += 12;
-  else {
-    const hits = nameParts.filter(p => p.length > 2 && wn.includes(p));
-    score += hits.length * 3;
-  }
+  else { score += nameParts.filter(p => p.length > 2 && wn.includes(p)).length * 3; }
 
-  // Alias score
   for (const alias of aliases) {
     if (alias === normName || alias.includes(normName) || normName.includes(alias)) { score += 15; break; }
     if (nameParts.some(p => p.length > 2 && alias.includes(p))) { score += 8; break; }
   }
 
-  // Producent score
   if (normProducer) {
     if (wp === normProducer) score += 15;
     else if (wp.includes(normProducer) || normProducer.includes(wp)) score += 10;
     else {
       const phits = producerParts.filter(p => p.length > 2 && wp.includes(p));
-      if (phits.length > 0) score += phits.length * 4;
-      else score -= 10;
+      score += phits.length > 0 ? phits.length * 4 : -10;
     }
   }
-
   return score;
 }
 
-// Match een batch wijnen in één keer tegen de DB
 async function matchBatch(wines) {
-  // Verzamel alle unieke zoektermen
   const keywords = new Set();
   wines.forEach(w => {
-    const normName = normalize(w.name);
-    const normProducer = normalize(w.producer);
-    const nameParts = normName.split(' ').filter(p => p.length > 2);
-    const producerParts = normProducer.split(' ').filter(p => p.length > 2);
-    if (nameParts[0]) keywords.add(nameParts[0]);
-    if (nameParts[1]) keywords.add(nameParts[1]);
-    if (producerParts[0]) keywords.add(producerParts[0]);
+    normalize(w.name).split(' ').filter(p => p.length > 2).slice(0, 2).forEach(k => keywords.add(k));
+    normalize(w.producer).split(' ').filter(p => p.length > 2).slice(0, 1).forEach(k => keywords.add(k));
   });
 
-  // Haal kandidaten op met OR query — één grote fetch voor alle wijnen
   const fields = 'id,name,producer,vintage,region,country,colour,market_price_eur,market_price_min,market_price_max,search_aliases';
-  const orTerms = [...keywords].map(k => `name.ilike.*${encodeURIComponent(k)}*,producer.ilike.*${encodeURIComponent(k)}*`).join(',');
+  const orTerms = [...keywords].slice(0, 20).map(k => `name.ilike.*${encodeURIComponent(k)}*,producer.ilike.*${encodeURIComponent(k)}*`).join(',');
 
   let candidates = [];
-  try {
-    candidates = await sbGet(`wines?or=(${orTerms})&limit=50&select=${fields}`);
-  } catch(e) {
-    console.warn('matchBatch fetch error:', e.message);
-    return wines.map(() => null);
-  }
+  try { candidates = await sbGet(`wines?or=(${orTerms})&limit=60&select=${fields}`); }
+  catch(e) { console.warn('matchBatch error:', e.message); return wines.map(() => null); }
 
-  // Haal vintage prijzen op voor alle kandidaat wine_ids
   const candidateIds = candidates.map(c => c.id);
   let vintagePrices = [];
   if (candidateIds.length > 0) {
+    const years = wines.map(w => w.vintage).filter(Boolean);
+    const minY = years.length ? Math.min(...years) - 3 : 1990;
+    const maxY = years.length ? Math.max(...years) + 3 : 2025;
     try {
-      const vintageYears = wines.map(w => w.vintage).filter(Boolean);
-      const minYear = vintageYears.length ? Math.min(...vintageYears) - 3 : 1990;
-      const maxYear = vintageYears.length ? Math.max(...vintageYears) + 3 : 2025;
-      vintagePrices = await sbGet(
-        `wine_vintage_prices?wine_id=in.(${candidateIds.join(',')})&vintage=gte.${minYear}&vintage=lte.${maxYear}&select=wine_id,vintage,market_price_eur,market_price_min,market_price_max`
-      );
-    } catch(e) {
-      console.warn('vintage prices fetch error:', e.message);
-    }
+      vintagePrices = await sbGet(`wine_vintage_prices?wine_id=in.(${candidateIds.join(',')})&vintage=gte.${minY}&vintage=lte.${maxY}&select=wine_id,vintage,market_price_eur,market_price_min,market_price_max`);
+    } catch(e) { console.warn('vintage prices error:', e.message); }
   }
 
-  // Maak vintage prijzen lookup: wine_id → vintage → prijs
   const vpLookup = {};
   for (const vp of vintagePrices) {
     if (!vpLookup[vp.wine_id]) vpLookup[vp.wine_id] = {};
     vpLookup[vp.wine_id][vp.vintage] = vp;
   }
 
-  // Match elke wijn tegen kandidaten
   return wines.map(w => {
     const normName = normalize(w.name);
     const normProducer = normalize(w.producer);
@@ -130,14 +119,11 @@ async function matchBatch(wines) {
     }
     if (!best) return null;
 
-    // Zoek beste vintage prijs
     let priceData = null;
     if (w.vintage && vpLookup[best.id]) {
-      // Exacte match
       if (vpLookup[best.id][w.vintage]) {
         priceData = vpLookup[best.id][w.vintage];
       } else {
-        // Dichtstbijzijnde ±3 jaar
         let minDiff = 999, closest = null;
         for (const [yr, data] of Object.entries(vpLookup[best.id])) {
           const diff = Math.abs(parseInt(yr) - w.vintage);
@@ -146,26 +132,99 @@ async function matchBatch(wines) {
         priceData = closest;
       }
     }
-
-    // Fallback naar wines tabel prijs
     if (!priceData && best.market_price_eur) {
       priceData = { market_price_eur: best.market_price_eur, market_price_min: best.market_price_min, market_price_max: best.market_price_max };
     }
 
-    return {
-      ...best,
-      match_score: bestScore,
-      market_price_eur: priceData?.market_price_eur || null,
-      market_price_min: priceData?.market_price_min || null,
-      market_price_max: priceData?.market_price_max || null,
-    };
+    return { ...best, match_score: bestScore, market_price_eur: priceData?.market_price_eur || null, market_price_min: priceData?.market_price_min || null, market_price_max: priceData?.market_price_max || null };
   });
 }
+
+// ── BEREKEN STEAL SCORE ──
+function calcStealScore(restaurantPrice, marketPrice) {
+  if (!marketPrice || !restaurantPrice) return 0;
+  const discount = (marketPrice - restaurantPrice) / marketPrice;
+  if (discount <= 0) return 0;
+  return Math.min(100, Math.round(discount * 100));
+}
+
+// ── SLA RESTAURANT OP OF ZOEK OP ──
+async function upsertRestaurant(name, city) {
+  // Zoek bestaand restaurant op naam (case-insensitive)
+  try {
+    const existing = await sbGet(`restaurants?name=ilike.${encodeURIComponent(name)}&limit=1&select=id,name`);
+    if (existing.length > 0) {
+      // Update last_scanned_at
+      await sbPatch(`restaurants?id=eq.${existing[0].id}`, { last_scanned_at: new Date().toISOString() });
+      return existing[0].id;
+    }
+    // Nieuw restaurant aanmaken
+    const created = await sbPost('restaurants', { name, city: city || 'Amsterdam', last_scanned_at: new Date().toISOString() });
+    return created[0]?.id;
+  } catch(e) {
+    console.warn('upsertRestaurant error:', e.message);
+    return null;
+  }
+}
+
+// ── SLA SCAN RESULTATEN OP ──
+async function saveScanResults(restaurantId, wines) {
+  if (!restaurantId || !wines.length) return;
+  const steals = wines.filter(w => w.matched && w.steal_score > 0);
+  if (!steals.length) return;
+
+  try {
+    const rows = steals.map(w => ({
+      restaurant_id: restaurantId,
+      wine_name: w.name,
+      producer: w.producer || null,
+      vintage: w.vintage || null,
+      restaurant_price: w.price,
+      market_price: w.market_price_eur,
+      steal_score: w.steal_score,
+      is_steal: w.steal_score >= 10,
+      colour: w.colour || null,
+      region: w.region || null,
+      scanned_at: new Date().toISOString()
+    }));
+    await sbPost('scan_results', rows);
+  } catch(e) {
+    console.warn('saveScanResults error:', e.message);
+  }
+}
+
+// ── PUBLIEKE ENDPOINTS ──
+
+// Haal beste actieve steals op (voor homepage widget)
+app.get('/steals', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const days = parseInt(req.query.days) || 90;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    const results = await sbGet(
+      `scan_results?is_steal=eq.true&scanned_at=gte.${since}&order=steal_score.desc&limit=${limit}&select=wine_name,producer,vintage,restaurant_price,market_price,steal_score,colour,region,scanned_at,restaurant_id,restaurants(name,city,lat,lng)`
+    );
+    res.json({ success: true, steals: results });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Haal restaurants op (voor kaart)
+app.get('/restaurants', async (req, res) => {
+  try {
+    const results = await sbGet('restaurants?order=last_scanned_at.desc&limit=100&select=id,name,city,lat,lng,last_scanned_at');
+    res.json({ success: true, restaurants: results });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 app.post('/scan', async (req, res) => {
-  const { text, restaurant } = req.body;
+  const { text, restaurant, city } = req.body;
   if (!text || text.length < 20) return res.status(400).json({ error: 'Geen tekst' });
   if (text.length > 100000) return res.status(400).json({ error: 'Tekst te lang' });
 
@@ -201,14 +260,8 @@ JSON array:`
 
     wines = wines
       .filter(w => w.price && w.price > 8 && w.price < 10000 && w.name?.length > 1)
-      .map(w => ({
-        name: String(w.name || '').trim(),
-        producer: String(w.producer || '').trim(),
-        vintage: w.vintage ? parseInt(w.vintage) : null,
-        price: parseFloat(w.price),
-      }));
+      .map(w => ({ name: String(w.name || '').trim(), producer: String(w.producer || '').trim(), vintage: w.vintage ? parseInt(w.vintage) : null, price: parseFloat(w.price) }));
 
-    // Dedupliceer
     const seen = new Set();
     wines = wines.filter(w => {
       const key = normalize(w.name + w.producer + (w.vintage || ''));
@@ -217,7 +270,7 @@ JSON array:`
       return true;
     });
 
-    // Match in batches van 15 (1 grote DB call per batch)
+    // Match wijnen
     const BATCH = 15;
     const results = [];
     for (let i = 0; i < wines.length; i += BATCH) {
@@ -225,6 +278,7 @@ JSON array:`
       const matched = await matchBatch(batch);
       batch.forEach((w, j) => {
         const db = matched[j];
+        const stealScore = calcStealScore(w.price, db?.market_price_eur);
         results.push({
           ...w,
           matched: !!(db?.market_price_eur),
@@ -234,8 +288,16 @@ JSON array:`
           market_price_eur: db?.market_price_eur || null,
           market_price_min: db?.market_price_min || null,
           market_price_max: db?.market_price_max || null,
+          steal_score: stealScore,
         });
       });
+    }
+
+    // Sla op in database (fire & forget — wacht niet op resultaat)
+    if (restaurant) {
+      upsertRestaurant(restaurant, city).then(restaurantId => {
+        saveScanResults(restaurantId, results);
+      }).catch(e => console.warn('save error:', e.message));
     }
 
     res.json({
@@ -243,6 +305,7 @@ JSON array:`
       wines: results,
       count: results.length,
       matched: results.filter(w => w.matched).length,
+      steals: results.filter(w => w.steal_score > 0).length,
       tokens_used: message.usage.input_tokens + message.usage.output_tokens
     });
 
