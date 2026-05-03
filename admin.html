@@ -180,8 +180,8 @@ const H=x=>({'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'applicat
 
 async function api(path,method,body){
   const r=await fetch(SB+path,{method:method||'GET',headers:H(method==='GET'?{'Prefer':'count=exact'}:{'Prefer':'return=minimal'}),body:body?JSON.stringify(body):null});
-  if(!r.ok){const t=await r.text().catch(()=>'');throw new Error(t||'HTTP '+r.status);}
-  if(method==='GET'){const d=await r.json();return{data:d,count:parseInt((r.headers.get('content-range')||'').split('/')[1])||d.length};}
+  if(r.status!==200&&r.status!==201&&r.status!==204&&r.status!==206){const t=await r.text().catch(()=>'');throw new Error(t||'HTTP '+r.status);}
+  if(!method||method==='GET'){const d=await r.json().catch(()=>[]);return{data:d,count:parseInt((r.headers.get('content-range')||'').split('/')[1])||d.length};}
   return{};
 }
 
