@@ -229,12 +229,9 @@ app.post('/scan', async (req, res) => {
   if (text.length > 100000) return res.status(400).json({ error: 'Tekst te lang' });
 
   try {
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 16000,
-      messages: [{
-        role: 'user',
-        content: `Je bent een expert in het lezen van restaurantwijnkaarten. Extraheer ALLEEN de wijnen als JSON array.
+    // Splits grote teksten in chunks van max 8000 chars
+    const CHUNK_SIZE = 8000;
+    const prompt = `Je bent een expert in het lezen van restaurantwijnkaarten. Extraheer ALLEEN de wijnen als JSON array.
 
 Regels:
 - Geef ALLEEN een JSON array terug, geen uitleg of markdown
@@ -245,20 +242,53 @@ Regels:
 - Geen duplicaten
 
 Wijnkaart van ${restaurant || 'restaurant'}:
-${text}
+`;
 
-JSON array:`
-      }]
-    });
+    const chunks = [];
+    if (text.length <= CHUNK_SIZE) {
+      chunks.push(text);
+    } else {
+      // Splits op lege regels om wijnen niet door te knippen
+      const lines = text.split('\n');
+      let current = '';
+      for (const line of lines) {
+        if ((current + '\n' + line).length > CHUNK_SIZE && current.length > 500) {
+          chunks.push(current);
+          current = line;
+        } else {
+          current += (current ? '\n' : '') + line;
+        }
+      }
+      if (current.length > 100) chunks.push(current);
+    }
 
-    let raw = message.content[0].text.trim()
-      .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+    console.log(`Processing ${chunks.length} chunk(s), total ${text.length} chars`);
 
-    let wines;
-    try { wines = JSON.parse(raw); }
-    catch { const m = raw.match(/\[[\s\S]*\]/); wines = m ? JSON.parse(m[0]) : []; }
+    // Verwerk chunks parallel (max 3 tegelijk)
+    let allWinesRaw = [];
+    const PARALLEL = 3;
+    for (let i = 0; i < chunks.length; i += PARALLEL) {
+      const batch = chunks.slice(i, i + PARALLEL);
+      const results = await Promise.all(batch.map(async (chunk) => {
+        try {
+          const message = await anthropic.messages.create({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 8000,
+            messages: [{ role: 'user', content: prompt + chunk + '\n\nJSON array:' }]
+          });
+          let raw = message.content[0].text.trim()
+            .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+          try { return JSON.parse(raw); }
+          catch { const m = raw.match(/\[[\s\S]*\]/); return m ? JSON.parse(m[0]) : []; }
+        } catch(e) {
+          console.warn('Chunk error:', e.message);
+          return [];
+        }
+      }));
+      results.forEach(r => allWinesRaw.push(...r));
+    }
 
-    wines = wines
+    let wines = allWinesRaw
       .filter(w => w.price && w.price > 8 && w.price < 10000 && w.name?.length > 1)
       .map(w => ({ name: String(w.name || '').trim(), producer: String(w.producer || '').trim(), vintage: w.vintage ? parseInt(w.vintage) : null, price: parseFloat(w.price) }));
 
@@ -306,7 +336,7 @@ JSON array:`
       count: results.length,
       matched: results.filter(w => w.matched).length,
       steals: results.filter(w => w.steal_score > 0).length,
-      tokens_used: message.usage.input_tokens + message.usage.output_tokens
+      tokens_used: 0
     });
 
   } catch (err) {
