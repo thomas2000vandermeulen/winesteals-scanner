@@ -179,10 +179,14 @@ function checkPw(){
 const H=x=>({'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json',...x});
 
 async function api(path,method,body){
-  const r=await fetch(SB+path,{method:method||'GET',headers:H(method==='GET'?{'Prefer':'count=exact'}:{'Prefer':'return=minimal'}),body:body?JSON.stringify(body):null});
+  const r=await fetch(SB+path,{method:method||'GET',headers:H(method==='GET'?{'Prefer':'count=exact','Range-Unit':'items','Range':'0-9999'}:{'Prefer':'return=minimal'}),body:body?JSON.stringify(body):null});
   if(r.status!==200&&r.status!==201&&r.status!==204&&r.status!==206){const t=await r.text().catch(()=>'');throw new Error(t||'HTTP '+r.status);}
   if(!method||method==='GET'){const d=await r.json().catch(()=>[]);return{data:d,count:parseInt((r.headers.get('content-range')||'').split('/')[1])||d.length};}
   return{};
+}
+async function apiCount(path){
+  const r=await fetch(SB+path,{method:'HEAD',headers:H({'Prefer':'count=exact'})});
+  return parseInt((r.headers.get('content-range')||'').split('/')[1])||0;
 }
 
 async function init(){await Promise.all([loadStats(),loadPriced(),loadPending()])}
@@ -190,19 +194,19 @@ async function init(){await Promise.all([loadStats(),loadPriced(),loadPending()]
 async function loadStats(){
   try{
     const[tot,pen,red,wht,spr,vnt]=await Promise.all([
-      api('/wines?select=id&price_source=neq.pending'),
-      api('/wines?select=id&price_source=eq.pending'),
-      api('/wines?select=id&colour=eq.red&price_source=neq.pending'),
-      api('/wines?select=id&colour=eq.white&price_source=neq.pending'),
-      api('/wines?select=id&colour=eq.sparkling&price_source=neq.pending'),
-      api('/wine_vintage_prices?select=id'),
+      apiCount('/wines?select=id&price_source=neq.pending'),
+      apiCount('/wines?select=id&price_source=eq.pending'),
+      apiCount('/wines?select=id&colour=eq.red&price_source=neq.pending'),
+      apiCount('/wines?select=id&colour=eq.white&price_source=neq.pending'),
+      apiCount('/wines?select=id&colour=eq.sparkling&price_source=neq.pending'),
+      apiCount('/wine_vintage_prices?select=id'),
     ]);
-    document.getElementById('s-total').textContent=tot.count;
-    document.getElementById('s-pending').textContent=pen.count;
-    document.getElementById('s-red').textContent=red.count;
-    document.getElementById('s-white').textContent=wht.count;
-    document.getElementById('s-sparkling').textContent=spr.count;
-    document.getElementById('s-vintage').textContent=vnt.count;
+    document.getElementById('s-total').textContent=tot;
+    document.getElementById('s-pending').textContent=pen;
+    document.getElementById('s-red').textContent=red;
+    document.getElementById('s-white').textContent=wht;
+    document.getElementById('s-sparkling').textContent=spr;
+    document.getElementById('s-vintage').textContent=vnt;
   }catch(e){console.warn(e.message)}
 }
 
