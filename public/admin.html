@@ -86,7 +86,7 @@ td input,td select{width:100%;padding:4px 6px;border:1.5px solid var(--wine);bor
     <div class="stat"><strong id="s-pending">–</strong>pending</div>
     <div class="stat"><strong id="s-red">–</strong>rood</div>
     <div class="stat"><strong id="s-white">–</strong>wit</div>
-    <div class="stat"><strong id="s-sparkling">–</strong>mousseux</div>
+    <div class="stat"><strong id="s-sparkling">–</strong>sparkling</div>
     <div class="stat"><strong id="s-vintage">–</strong>vintage prijzen</div>
   </div>
 </div>
@@ -107,7 +107,7 @@ td input,td select{width:100%;padding:4px 6px;border:1.5px solid var(--wine);bor
       <select id="f-colour" onchange="applyFilters()">
         <option value="">Alle</option>
         <option value="red">Rood</option><option value="white">Wit</option>
-        <option value="sparkling">Mousseux</option><option value="rosé">Rosé</option><option value="fortified">Versterkt</option>
+        <option value="sparkling">Sparkling</option><option value="rosé">Rosé</option><option value="dessert">Dessert</option>
       </select>
       <label>Land:</label>
       <select id="f-country" onchange="applyFilters()"><option value="">Alle landen</option></select>
@@ -146,7 +146,7 @@ td input,td select{width:100%;padding:4px 6px;border:1.5px solid var(--wine);bor
       <div class="fg"><label>Kleur</label>
         <select id="f-colour-add">
           <option value="red">Rood</option><option value="white">Wit</option>
-          <option value="sparkling">Mousseux</option><option value="rosé">Rosé</option><option value="fortified">Versterkt</option>
+          <option value="sparkling">Sparkling</option><option value="rosé">Rosé</option><option value="dessert">Dessert</option>
         </select>
       </div>
       <div class="fg"><label>Marktprijs (€)</label><input id="f-price-add" type="number" placeholder="65"></div>
@@ -190,12 +190,12 @@ async function init(){await Promise.all([loadStats(),loadPriced(),loadPending()]
 async function loadStats(){
   try{
     const[tot,pen,red,wht,spr,vnt]=await Promise.all([
-      api('/wines?select=id&price_source=neq.pending&limit=1'),
-      api('/wines?select=id&price_source=eq.pending&limit=1'),
-      api('/wines?select=id&colour=eq.red&price_source=neq.pending&limit=1'),
-      api('/wines?select=id&colour=eq.white&price_source=neq.pending&limit=1'),
-      api('/wines?select=id&colour=eq.sparkling&price_source=neq.pending&limit=1'),
-      api('/wine_vintage_prices?select=id&limit=1'),
+      api('/wines?select=id&price_source=neq.pending'),
+      api('/wines?select=id&price_source=eq.pending'),
+      api('/wines?select=id&colour=eq.red&price_source=neq.pending'),
+      api('/wines?select=id&colour=eq.white&price_source=neq.pending'),
+      api('/wines?select=id&colour=eq.sparkling&price_source=neq.pending'),
+      api('/wine_vintage_prices?select=id'),
     ]);
     document.getElementById('s-total').textContent=tot.count;
     document.getElementById('s-pending').textContent=pen.count;
