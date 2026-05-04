@@ -7,14 +7,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--wine:#7B1C2E;--wine-dark:#4A0F1C;--gold:#C9A84C;--cream:#F8F4EE;--ink:#1A1208;--muted:#6B5E52;--border:rgba(123,28,46,0.15);--green:#1B5E20;--green-light:#E8F5E9;--orange:#E65100;--orange-light:#FFF3E0;--red:#B71C1C;--red-light:#FFEBEE}
+:root{--wine:#7B1C2E;--wine-dark:#4A0F1C;--gold:#C9A84C;--cream:#F8F4EE;--ink:#1A1208;--muted:#6B5E52;--border:rgba(123,28,46,0.15);--green:#1B5E20;--gl:#E8F5E9;--orange:#E65100;--ol:#FFF3E0;--red:#B71C1C;--rl:#FFEBEE}
 body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
-.admin-nav{background:var(--wine-dark);display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;position:sticky;top:0;z-index:100}
+.nav{background:var(--wine-dark);display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:8px}
 .nav-brand{color:white;font-family:'Playfair Display',serif;font-size:17px;text-decoration:none;font-weight:700}
 .nav-links{display:flex;gap:4px}
 .nav-link{color:rgba(255,255,255,0.7);text-decoration:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;transition:all .15s}
 .nav-link:hover{color:white;background:rgba(255,255,255,0.1)}
 .nav-link.active{color:white;background:rgba(255,255,255,0.18)}
+.nav-stats{display:flex;gap:14px;font-size:12px;color:rgba(255,255,255,0.75)}
+.nav-stats strong{color:var(--gold)}
 .login-overlay{position:fixed;inset:0;background:var(--wine-dark);z-index:999;display:flex;align-items:center;justify-content:center}
 .login-overlay.hidden{display:none}
 .login-box{background:var(--cream);padding:48px 40px;border-radius:12px;width:360px;text-align:center}
@@ -22,94 +24,91 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .login-box p{color:var(--muted);font-size:14px;margin-bottom:24px}
 .login-box input{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;margin-bottom:16px;background:white}
 .login-box button{width:100%;padding:12px;background:var(--wine);color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer}
-.container{max-width:1200px;margin:0 auto;padding:28px 32px}
-.page-header{margin-bottom:24px}
-.page-header h1{font-family:'Playfair Display',serif;font-size:24px;color:var(--wine-dark);margin-bottom:4px}
-.page-header p{color:var(--muted);font-size:14px}
-.setup-panel{background:white;border-radius:10px;border:1px solid var(--border);padding:24px;margin-bottom:24px}
-.setup-panel h3{font-size:14px;font-weight:600;margin-bottom:16px;color:var(--wine-dark)}
-.setup-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
-.fg{flex:1;min-width:200px}
-.fg label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
-.fg input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:'DM Mono',monospace;background:white}
+.wrap{max-width:1200px;margin:0 auto;padding:28px 32px}
+.ph{margin-bottom:20px}
+.ph h1{font-family:'Playfair Display',serif;font-size:22px;color:var(--wine-dark);margin-bottom:4px}
+.ph p{color:var(--muted);font-size:13px}
+.setup{background:white;border-radius:10px;border:1px solid var(--border);padding:18px 20px;margin-bottom:18px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.fg input{padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;background:white;width:80px}
 .fg input:focus{outline:none;border-color:var(--wine)}
-.btn{padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500}
+.btn{padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500}
 .btn-primary{background:var(--wine);color:white}
 .btn-primary:disabled{opacity:.4;cursor:default}
-.btn-secondary{background:white;color:var(--wine);border:1.5px solid var(--wine)}
 .btn-green{background:var(--green);color:white}
 .btn-green:disabled{opacity:.4;cursor:default}
 .btn-sm{padding:5px 12px;font-size:12px}
-
-.stats-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
-.stat{padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500}
-.stat-pending{background:#F3E5F5;color:#4A148C}
-.stat-found{background:var(--green-light);color:var(--green)}
-.stat-review{background:var(--orange-light);color:var(--orange)}
-.stat-notfound{background:#ECEFF1;color:#455A64}
-
-.controls{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
-.progress-wrap{margin-bottom:20px}
-.progress-bar{height:5px;background:#E0E0E0;border-radius:3px;overflow:hidden}
-.progress-fill{height:100%;background:var(--wine);transition:width .3s}
-.progress-label{font-size:12px;color:var(--muted);margin-top:5px}
-
-.wines-grid{display:grid;gap:10px}
-.wine-card{background:white;border-radius:9px;border:1.5px solid var(--border);overflow:hidden;transition:border-color .2s}
-.wine-card.st-found{border-color:#81C784}
-.wine-card.st-uncertain{border-color:#FFB74D}
-.wine-card.st-notfound{border-color:#EF9A9A}
-.wine-card.st-approved{border-color:var(--green);background:#F1F8E9}
-.wine-card.st-saved{opacity:.5}
-.wine-card.st-searching{border-color:var(--wine);animation:blink 1.2s infinite}
+.controls{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.prog-wrap{margin-bottom:18px}
+.prog-bar{height:4px;background:#E0E0E0;border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:var(--wine);transition:width .3s}
+.prog-label{font-size:12px;color:var(--muted);margin-top:4px}
+.stats-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.stat{padding:6px 14px;border-radius:16px;font-size:12px;font-weight:500}
+.sp{background:#F3E5F5;color:#4A148C}
+.sf{background:var(--gl);color:var(--green)}
+.su{background:var(--ol);color:var(--orange)}
+.ss{background:#ECEFF1;color:#455A64}
+.grid{display:grid;gap:8px}
+.card{background:white;border-radius:8px;border:1.5px solid var(--border);transition:border-color .15s}
+.card.c-found{border-color:#81C784}
+.card.c-uncertain{border-color:#FFB74D}
+.card.c-notfound{border-color:#EF9A9A}
+.card.c-approved{border-color:var(--green);background:#F9FBF9}
+.card.c-saved{border-color:#A5D6A7;opacity:.55}
+.card.c-searching{border-color:var(--wine);animation:blink 1.2s infinite}
+.card.c-skipped{opacity:.3}
 @keyframes blink{0%,100%{border-color:var(--wine)}50%{border-color:var(--gold)}}
-
-.card-row{display:flex;align-items:center;gap:12px;padding:12px 14px}
-.card-icon{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:#F5F5F5;color:#9E9E9E}
-.st-found .card-icon{background:#E8F5E9;color:var(--green)}
-.st-uncertain .card-icon{background:var(--orange-light);color:var(--orange)}
-.st-notfound .card-icon{background:var(--red-light);color:var(--red)}
-.st-approved .card-icon{background:var(--green);color:white}
-.st-searching .card-icon{background:rgba(123,28,46,.1);color:var(--wine)}
-.card-info{flex:1;min-width:0}
-.card-name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card-sub{font-size:12px;color:var(--muted);margin-top:1px}
-.card-price{display:flex;align-items:center;gap:8px}
-.price-in{width:90px;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:14px;font-weight:600;font-family:'DM Mono',monospace;text-align:right}
-.price-in:focus{outline:none;border-color:var(--wine)}
-.conf-badge{padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;white-space:nowrap}
-.conf-high{background:var(--green-light);color:var(--green)}
-.conf-med{background:var(--orange-light);color:var(--orange)}
-.conf-low{background:var(--red-light);color:var(--red)}
-.card-note{font-size:11px;color:var(--muted);font-style:italic;min-width:100px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.btn-approve{padding:5px 12px;background:var(--green);color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;white-space:nowrap}
-.btn-skip{padding:5px 10px;background:#ECEFF1;color:#546E7A;border:none;border-radius:6px;font-size:12px;cursor:pointer}
-.btn-approved-tag{padding:5px 10px;background:var(--green-light);color:var(--green);border:1px solid #A5D6A7;border-radius:6px;font-size:12px;white-space:nowrap}
-
-.log-panel{margin-top:20px;background:white;border-radius:8px;border:1px solid var(--border);padding:14px;max-height:160px;overflow-y:auto}
-.log-panel h4{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px}
-.log-line{font-size:12px;font-family:'DM Mono',monospace;padding:2px 0;color:var(--ink)}
-.log-line.ok{color:var(--green)}
-.log-line.warn{color:var(--orange)}
-.log-line.err{color:var(--red)}
-
-.save-footer{position:sticky;bottom:0;background:white;border-top:2px solid var(--border);padding:12px 32px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.save-footer p{font-size:13px;color:var(--muted)}
-.save-footer strong{color:var(--wine)}
+.row{display:flex;align-items:center;gap:10px;padding:10px 14px}
+.ic{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:#F5F5F5;color:#9E9E9E}
+.c-found .ic{background:var(--gl);color:var(--green)}
+.c-uncertain .ic{background:var(--ol);color:var(--orange)}
+.c-notfound .ic{background:var(--rl);color:var(--red)}
+.c-approved .ic{background:var(--green);color:white}
+.c-saved .ic{background:#A5D6A7;color:white}
+.c-searching .ic{background:rgba(123,28,46,.1);color:var(--wine)}
+.info{flex:1;min-width:0}
+.wname{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wsub{font-size:11px;color:var(--muted);margin-top:1px}
+.price-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.pi{width:88px;padding:5px 9px;border:1.5px solid var(--border);border-radius:6px;font-size:14px;font-weight:600;font-family:'DM Mono',monospace;text-align:right}
+.pi:focus{outline:none;border-color:var(--wine)}
+.conf{padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;white-space:nowrap}
+.ch{background:var(--gl);color:var(--green)}
+.cm{background:var(--ol);color:var(--orange)}
+.cl{background:var(--rl);color:var(--red)}
+.note{font-size:11px;color:var(--muted);font-style:italic;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.act{display:flex;gap:6px;flex-shrink:0}
+.ba{padding:5px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500}
+.ba-ok{background:var(--green);color:white}
+.ba-ok:hover{background:#2E7D32}
+.ba-skip{background:#ECEFF1;color:#546E7A}
+.ba-skip:hover{background:#CFD8DC}
+.ba-done{background:var(--gl);color:var(--green);border:1px solid #A5D6A7;cursor:default}
+.log{margin-top:18px;background:white;border-radius:8px;border:1px solid var(--border);padding:12px 16px;max-height:150px;overflow-y:auto}
+.log h4{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px}
+.ll{font-size:12px;font-family:'DM Mono',monospace;padding:2px 0;color:var(--ink)}
+.ll.ok{color:var(--green)}.ll.warn{color:var(--orange)}.ll.err{color:var(--red)}
+.footer{position:sticky;bottom:0;background:white;border-top:2px solid var(--border);padding:12px 32px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.footer p{font-size:13px;color:var(--muted)}
+.footer strong{color:var(--wine)}
+.toast{position:fixed;bottom:72px;right:24px;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;color:white;z-index:9999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.ok{background:var(--green)}.toast.err{background:var(--red)}
 </style>
 </head>
 <body>
 
-<div class="login-overlay" id="login-overlay">
+<div class="login-overlay" id="lo">
   <div class="login-box">
-    <h2>WineSteals</h2>
-    <p>Admin toegang vereist</p>
-    <input type="password" id="pw-input" placeholder="Wachtwoord" onkeydown="if(event.key==='Enter')checkPw()"/>
-    <button onclick="checkPw()">Inloggen</button>
+    <h2>WineSteals</h2><p>Admin toegang</p>
+    <input type="password" id="pw" placeholder="Wachtwoord" onkeydown="if(event.key==='Enter')chk()"/>
+    <button onclick="chk()">Inloggen</button>
   </div>
 </div>
 
-<nav class="admin-nav">
+<nav class="nav">
   <a class="nav-brand" href="/admin.html">🍷 WineSteals Admin</a>
   <div class="nav-links">
     <a href="/admin.html" class="nav-link">Wijnen</a>
@@ -117,273 +116,282 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
     <a href="/admin-scans.html" class="nav-link">Scans</a>
     <a href="/admin-restaurants.html" class="nav-link">Restaurants</a>
   </div>
+  <div class="nav-stats">
+    <span>Totaal: <strong id="s-total">–</strong></span>
+    <span>Pending: <strong id="s-pending">–</strong></span>
+    <span>Vintage: <strong id="s-vp">–</strong></span>
+  </div>
 </nav>
 
-<div class="container">
-  <div class="page-header">
+<div class="wrap">
+  <div class="ph">
     <h1>Price Finder</h1>
-    <p>Zoekt automatisch marktprijzen op voor pending wijnen. Jij keurt goed voor opslaan.</p>
+    <p>Zoekt marktprijzen op voor pending wijnen via de WineSteals server. Keur goed per wijn, dan opslaan.</p>
   </div>
 
-  <div class="setup-panel">
-    <h3>Instellingen</h3>
-    <div class="setup-row">
-      <div class="fg" style="max-width:140px">
-        <label>Batch grootte</label>
-        <input type="number" id="batch-size" value="15" min="1" max="30"/>
-      </div>
-      <button class="btn btn-primary" onclick="initFinder()">Starten →</button>
+  <div class="setup">
+    <div class="fg">
+      <label>Batch grootte</label>
+      <input type="number" id="bs" value="20" min="5" max="50"/>
     </div>
-    <p style="font-size:12px;color:var(--muted);margin-top:10px">Prijzen worden opgezocht via de WineSteals server. Kosten: ~€0.001 per batch van 15 wijnen.</p>
+    <button class="btn btn-primary" onclick="start()">Starten →</button>
+    <span style="font-size:12px;color:var(--muted)">~€0.001 per batch · max 50 per keer</span>
   </div>
 
-  <div id="finder-app" style="display:none">
-    <div class="stats-bar">
-      <span class="stat stat-pending">⏳ <span id="st-pending">0</span> pending</span>
-      <span class="stat stat-found">✓ <span id="st-approved">0</span> goedgekeurd</span>
-      <span class="stat stat-review">~ <span id="st-uncertain">0</span> te reviewen</span>
-      <span class="stat stat-notfound">— <span id="st-skip">0</span> overgeslagen</span>
+  <div id="app" style="display:none">
+    <div class="stats-row">
+      <span class="stat sp">⏳ <span id="st-p">0</span> pending</span>
+      <span class="stat sf">✓ <span id="st-ok">0</span> opgeslagen</span>
+      <span class="stat su">~ <span id="st-u">0</span> goedgekeurd</span>
+      <span class="stat ss">— <span id="st-s">0</span> overgeslagen</span>
     </div>
 
     <div class="controls">
-      <button class="btn btn-primary" id="btn-batch" onclick="runBatch()">🔍 Batch zoeken</button>
-      <button class="btn btn-green" id="btn-save" onclick="saveApproved()" disabled>💾 Opslaan (<span id="save-count">0</span>)</button>
-      <button class="btn btn-secondary btn-sm" onclick="loadMore()">↓ Meer laden</button>
-      <span id="batch-status" style="font-size:13px;color:var(--muted)"></span>
+      <button class="btn btn-primary" id="bb" onclick="runBatch()">🔍 Batch zoeken</button>
+      <button class="btn btn-green" id="bs2" onclick="saveAll()" disabled>💾 Alles opslaan (<span id="sc">0</span>)</button>
+      <button class="btn btn-sm" style="background:white;border:1.5px solid var(--border)" onclick="loadMore()">↓ Meer laden</button>
+      <span id="bstat" style="font-size:12px;color:var(--muted)"></span>
     </div>
 
-    <div class="progress-wrap">
-      <div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
-      <div class="progress-label" id="prog-label"></div>
+    <div class="prog-wrap">
+      <div class="prog-bar"><div class="prog-fill" id="pf" style="width:0%"></div></div>
+      <div class="prog-label" id="pl"></div>
     </div>
 
-    <div class="wines-grid" id="wines-grid"></div>
+    <div class="grid" id="grid"></div>
 
-    <div class="log-panel">
-      <h4>Log</h4>
-      <div id="log-entries"></div>
-    </div>
+    <div class="log"><h4>Log</h4><div id="log"></div></div>
   </div>
 </div>
 
-<div class="save-footer" id="save-footer" style="display:none">
-  <p><strong id="footer-count">0</strong> wijnen goedgekeurd en klaar om op te slaan</p>
-  <button class="btn btn-green" onclick="saveApproved()">💾 Opslaan in database</button>
+<div class="footer" id="footer" style="display:none">
+  <p>Goedgekeurd: <strong id="fc">0</strong> wijnen klaar om op te slaan</p>
+  <button class="btn btn-green" onclick="saveAll()">💾 Nu opslaan in database</button>
 </div>
+<div class="toast" id="toast"></div>
 
 <script>
 const PW='winesteals2026';
 const SB='https://kdhczlabjecqxlyuxprl.supabase.co/rest/v1';
-const SBKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
-let APIKEY='', BATCH=15;
-let allWines=[], processed=new Set(), results={}, offset=0, total=0;
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
+const RAIL='https://winestealsgithubio-production.up.railway.app';
 
-function checkPw(){
-  if(document.getElementById('pw-input').value===PW){
+let BATCH=20, all=[], processed=new Set(), results={}, offset=0, total=0;
+
+function chk(){
+  if(document.getElementById('pw').value===PW){
     localStorage.setItem('ws_aa',btoa(PW));
-    document.getElementById('login-overlay').classList.add('hidden');
-  }else document.getElementById('pw-input').style.borderColor='red';
+    document.getElementById('lo').classList.add('hidden');
+    loadStats();
+  }else document.getElementById('pw').style.borderColor='red';
 }
-if(localStorage.getItem('ws_aa')===btoa(PW))document.getElementById('login-overlay').classList.add('hidden');
+if(localStorage.getItem('ws_aa')===btoa(PW)){document.getElementById('lo').classList.add('hidden');loadStats();}
 
-async function sbFetch(p){
-  const r=await fetch(SB+'/'+p,{headers:{'apikey':SBKEY,'Authorization':'Bearer '+SBKEY,'Prefer':'count=exact'}});
+async function sb(path){
+  const r=await fetch(SB+'/'+path,{headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Prefer':'count=exact','Range-Unit':'items','Range':'0-0'}});
+  return parseInt((r.headers.get('content-range')||'').split('/')[1])||0;
+}
+async function sbPatch(path,body){
+  const r=await fetch(SB+'/'+path,{method:'PATCH',headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(body)});
+  if(!r.ok){const t=await r.text().catch(()=>'');throw new Error(t||'HTTP '+r.status);}
+}
+async function sbGet(path){
+  const r=await fetch(SB+'/'+path,{headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Prefer':'count=exact'}});
+  if(!r.ok)throw new Error('GET '+r.status);
   const d=await r.json();
   const count=parseInt((r.headers.get('content-range')||'').split('/')[1])||d.length;
   return{data:d,count};
 }
-async function sbPatch(p,b){
-  const r=await fetch(SB+'/'+p,{method:'PATCH',headers:{'apikey':SBKEY,'Authorization':'Bearer '+SBKEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(b)});
-  if(!r.ok)throw new Error('PATCH '+r.status);
+
+async function loadStats(){
+  try{
+    const[tot,pen,vp]=await Promise.all([sb('wines?select=id&price_source=neq.pending'),sb('wines?select=id&price_source=eq.pending'),sb('wine_vintage_prices?select=id')]);
+    document.getElementById('s-total').textContent=tot;
+    document.getElementById('s-pending').textContent=pen;
+    document.getElementById('s-vp').textContent=vp;
+  }catch(e){console.warn(e.message);}
 }
 
-async function initFinder(){
-  BATCH=parseInt(document.getElementById('batch-size').value)||15;
-  document.getElementById('finder-app').style.display='block';
-  document.getElementById('save-footer').style.display='flex';
+async function start(){
+  BATCH=Math.min(50,Math.max(5,parseInt(document.getElementById('bs').value)||20));
+  document.getElementById('app').style.display='block';
+  document.getElementById('footer').style.display='flex';
   await loadWines();
 }
 
 async function loadWines(){
-  log('Laden...','ok');
-  const{data,count}=await sbFetch('wines?price_source=eq.pending&order=name.asc&limit=200&offset='+offset+'&select=id,name,producer,vintage,country');
-  total=count;
-  allWines.push(...data);
-  document.getElementById('st-pending').textContent=count;
+  lg('Laden...','ok');
+  const{data,count}=await sbGet('wines?price_source=eq.pending&order=name.asc&limit=200&offset='+offset+'&select=id,name,producer,vintage,country,region');
+  total=count;all.push(...data);
+  document.getElementById('st-p').textContent=count;
   renderCards(data);
-  log(data.length+' wijnen geladen ('+count+' totaal)','ok');
+  lg(data.length+' wijnen geladen ('+count+' totaal)','ok');
   updateProg();
 }
-
-async function loadMore(){
-  offset+=200;
-  await loadWines();
-}
+async function loadMore(){offset+=200;await loadWines();}
 
 function renderCards(wines){
-  const grid=document.getElementById('wines-grid');
+  const g=document.getElementById('grid');
   wines.forEach(w=>{
     if(processed.has(w.id))return;
     const d=document.createElement('div');
-    d.className='wine-card';d.id='card-'+w.id;
-    d.innerHTML=`<div class="card-row">
-      <div class="card-icon">⏳</div>
-      <div class="card-info">
-        <div class="card-name">${esc(w.name)}</div>
-        <div class="card-sub">${esc(w.producer||'')}${w.vintage?' · '+w.vintage:''}</div>
+    d.className='card';d.id='c-'+w.id;
+    d.innerHTML=`<div class="row">
+      <div class="ic">⏳</div>
+      <div class="info">
+        <div class="wname">${esc(w.name)}</div>
+        <div class="wsub">${esc(w.producer||'')}${w.vintage?' · '+w.vintage:''}</div>
       </div>
-      <div class="card-price">
+      <div class="price-wrap">
         <span style="color:var(--muted);font-size:13px">€</span>
-        <input class="price-in" id="pi-${w.id}" type="number" placeholder="—" step="0.5"/>
-        <span id="conf-${w.id}"></span>
+        <input class="pi" id="pi-${w.id}" type="number" placeholder="—" step="0.5"/>
+        <span id="cf-${w.id}"></span>
       </div>
-      <div class="card-note" id="note-${w.id}"></div>
-      <div style="display:flex;gap:6px;flex-shrink:0">
-        <button class="btn-approve" id="app-${w.id}" onclick="approve('${w.id}')">✓</button>
-        <button class="btn-skip" onclick="skip('${w.id}')">—</button>
+      <div class="note" id="nt-${w.id}"></div>
+      <div class="act">
+        <button class="ba ba-ok" id="ap-${w.id}" onclick="approve('${w.id}')">✓ OK</button>
+        <button class="ba ba-skip" onclick="skip('${w.id}')">—</button>
       </div>
     </div>`;
-    grid.appendChild(d);
+    g.appendChild(d);
   });
 }
 
 async function runBatch(){
-  const btn=document.getElementById('btn-batch');
+  const btn=document.getElementById('bb');
   btn.disabled=true;btn.textContent='🔍 Bezig...';
-  const toSearch=allWines.filter(w=>!processed.has(w.id)).slice(0,BATCH);
-  if(!toSearch.length){log('Alles al verwerkt','warn');btn.disabled=false;btn.textContent='🔍 Batch zoeken';return;}
-  toSearch.forEach(w=>{processed.add(w.id);setCardState(w.id,'searching','🔍');});
-  log('Zoeken voor '+toSearch.length+' wijnen...','ok');
-  document.getElementById('batch-status').textContent='Verwerken...';
-
-  const wineList=toSearch.map((w,i)=>
-    `${i+1}. "${w.name}" — ${w.producer||'onbekend'}${w.vintage?', '+w.vintage:''}${w.country&&w.country!=='Unknown'?', '+w.country:''}`
-  ).join('\n');
-
-  const prompt=`Je bent een wijnprijsexpert. Geef de gemiddelde retailmarktprijs in EUR (Europese markt, 750ml) voor elke wijn.
-
-Geef ALLEEN een JSON array terug zonder uitleg of markdown. Elk object:
-{"index":N,"price":45.00,"confidence":"high/medium/low","note":"bron of toelichting max 8 woorden"}
-
-confidence:
-- "high": ken je goed, prijs ±10%
-- "medium": redelijk bekend, prijs ±25%  
-- "low": weinig info of onbekende producent
-- Als je de wijn echt niet kent: price:null
-
-Wijnen:
-${wineList}
-
-JSON array:`;
+  const todo=all.filter(w=>!processed.has(w.id)).slice(0,BATCH);
+  if(!todo.length){lg('Alles verwerkt','warn');btn.disabled=false;btn.textContent='🔍 Batch zoeken';return;}
+  todo.forEach(w=>{processed.add(w.id);setState(w.id,'c-searching','🔍');});
+  lg('Zoeken voor '+todo.length+' wijnen...','ok');
 
   try{
-    const resp=await fetch('/price-lookup',{
+    const resp=await fetch(RAIL+'/price-lookup',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({wines:toSearch.map(w=>({name:w.name,producer:w.producer,vintage:w.vintage,country:w.country}))})
+      body:JSON.stringify({wines:todo.map(w=>({id:w.id,name:w.name,producer:w.producer,vintage:w.vintage,country:w.country}))})
     });
-    if(!resp.ok){const e=await resp.json();throw new Error(e.error||'API '+resp.status);}
+    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error||'server '+resp.status);}
     const dat=await resp.json();
     const prices=dat.prices||[];
 
-    let nFound=0,nUncertain=0,nNot=0;
+    let nF=0,nU=0,nN=0;
     prices.forEach(p=>{
-      const w=toSearch[p.index-1];
+      const w=todo[p.index-1];
       if(!w)return;
-      const el=document.getElementById('pi-'+w.id);
-      const confEl=document.getElementById('conf-'+w.id);
-      const noteEl=document.getElementById('note-'+w.id);
+      const piEl=document.getElementById('pi-'+w.id);
+      const cfEl=document.getElementById('cf-'+w.id);
+      const ntEl=document.getElementById('nt-'+w.id);
       if(p.price&&p.price>0){
-        if(el)el.value=p.price;
-        const cc=p.confidence==='high'?'conf-high':p.confidence==='medium'?'conf-med':'conf-low';
+        if(piEl)piEl.value=p.price;
+        const cc=p.confidence==='high'?'ch':p.confidence==='medium'?'cm':'cl';
         const cl=p.confidence==='high'?'✓ Zeker':p.confidence==='medium'?'~ Redelijk':'? Onzeker';
-        if(confEl)confEl.innerHTML=`<span class="conf-badge ${cc}">${cl}</span>`;
-        if(noteEl)noteEl.textContent=p.note||'';
-        if(p.confidence==='high'){setCardState(w.id,'st-found','✓');nFound++;results[w.id]={price:p.price,conf:p.confidence,status:'found'};}
-        else{setCardState(w.id,'st-uncertain','~');nUncertain++;results[w.id]={price:p.price,conf:p.confidence,status:'uncertain'};}
+        if(cfEl)cfEl.innerHTML=`<span class="conf ${cc}">${cl}</span>`;
+        if(ntEl)ntEl.textContent=p.note||'';
+        if(p.confidence==='high'){setState(w.id,'c-found','✓');nF++;results[w.id]={price:p.price,conf:p.confidence,status:'found'};}
+        else{setState(w.id,'c-uncertain','~');nU++;results[w.id]={price:p.price,conf:p.confidence,status:'uncertain'};}
       }else{
-        setCardState(w.id,'st-notfound','?');
-        if(noteEl)noteEl.textContent=p.note||'Onbekend';
-        nNot++;results[w.id]={price:null,status:'notfound'};
+        setState(w.id,'c-notfound','?');
+        if(ntEl)ntEl.textContent=p.note||'Onbekend';
+        nN++;results[w.id]={price:null,status:'notfound'};
       }
     });
-    log(`Klaar: ${nFound} zeker, ${nUncertain} onzeker, ${nNot} onbekend`,'ok');
-    document.getElementById('batch-status').textContent=`${nFound} zeker gevonden`;
+    lg('Klaar: '+nF+' zeker, '+nU+' onzeker, '+nN+' onbekend','ok');
+    document.getElementById('bstat').textContent=nF+' zeker gevonden';
   }catch(e){
-    log('API fout: '+e.message,'err');
-    toSearch.forEach(w=>setCardState(w.id,'st-notfound','!'));
+    lg('Fout: '+e.message,'err');
+    todo.forEach(w=>setState(w.id,'c-notfound','!'));
   }
-  updateProg();
+  updateProg();updateStats();
   btn.disabled=false;btn.textContent='🔍 Batch zoeken';
 }
 
 function approve(id){
   const price=parseFloat(document.getElementById('pi-'+id)?.value);
-  if(!price||price<=0){alert('Voer een geldige prijs in');return;}
+  if(!price||price<=0){toast('Voer een geldige prijs in','err');return;}
   results[id]={...(results[id]||{}),price,status:'approved'};
-  setCardState(id,'st-approved','✓');
-  const btn=document.getElementById('app-'+id);
-  if(btn)btn.outerHTML=`<span class="btn-approved-tag">✓ OK</span>`;
+  setState(id,'c-approved','✓');
+  const btn=document.getElementById('ap-'+id);
+  if(btn)btn.outerHTML=`<span class="ba ba-done">✓ OK</span>`;
   updateStats();
 }
 
 function skip(id){
   results[id]={status:'skipped'};
-  const card=document.getElementById('card-'+id);
-  if(card)card.style.opacity='.35';
+  const card=document.getElementById('c-'+id);
+  if(card)card.classList.add('c-skipped');
   updateStats();
 }
 
-async function saveApproved(){
+async function saveAll(){
   const toSave=Object.entries(results).filter(([,v])=>v.status==='approved');
-  if(!toSave.length){alert('Geen goedgekeurde wijnen');return;}
-  const btn=document.getElementById('btn-save');
-  btn.disabled=true;btn.textContent='Opslaan...';
+  if(!toSave.length){toast('Geen goedgekeurde wijnen','err');return;}
+  
+  const saveBtn=document.getElementById('bs2');
+  saveBtn.disabled=true;saveBtn.textContent='Opslaan...';
+  
   let saved=0,failed=0;
   for(const[id,d]of toSave){
     try{
-      await sbPatch('wines?id=eq.'+id,{market_price_eur:d.price,market_price_min:Math.round(d.price*.8*100)/100,market_price_max:Math.round(d.price*1.3*100)/100,price_source:'ai_'+d.conf});
+      await sbPatch('wines?id=eq.'+id,{
+        market_price_eur:d.price,
+        market_price_min:Math.round(d.price*.8*100)/100,
+        market_price_max:Math.round(d.price*1.3*100)/100,
+        price_source:'ai_'+(d.conf||'medium')
+      });
+      // Update status naar saved zodat we weten het is gelukt
       results[id].status='saved';
-      const card=document.getElementById('card-'+id);
-      if(card){card.classList.add('st-saved');}
+      setState(id,'c-saved','✅');
+      // Verberg de approve knop
+      const ap=document.getElementById('ap-'+id);
+      if(ap)ap.outerHTML='<span class="ba ba-done">Opgeslagen</span>';
       saved++;
-    }catch(e){failed++;log('Fout '+id+': '+e.message,'err');}
+      lg('✓ Opgeslagen: '+id.substring(0,8)+'... €'+d.price,'ok');
+    }catch(e){
+      failed++;
+      lg('✗ Fout bij '+id.substring(0,8)+'...: '+e.message,'err');
+    }
   }
-  log(`✓ ${saved} opgeslagen${failed?', '+failed+' mislukt':''}`,saved>0?'ok':'err');
-  updateStats();
-  btn.disabled=false;btn.textContent='💾 Opslaan (0)';
+  
+  toast('✓ '+saved+' opgeslagen'+(failed?' ('+failed+' mislukt)':''),'ok');
+  lg('Klaar: '+saved+' opgeslagen'+(failed?', '+failed+' mislukt':''),'ok');
+  updateStats();loadStats();
+  saveBtn.disabled=false;saveBtn.textContent='💾 Alles opslaan (0)';
 }
 
-function setCardState(id,cls,icon){
-  const card=document.getElementById('card-'+id);
-  if(card){card.className='wine-card '+cls;const ic=card.querySelector('.card-icon');if(ic)ic.textContent=icon;}
+function setState(id,cls,icon){
+  const c=document.getElementById('c-'+id);
+  if(c){c.className='card '+cls;const i=c.querySelector('.ic');if(i)i.textContent=icon;}
 }
-
 function updateStats(){
-  const vals=Object.values(results);
-  const approved=vals.filter(v=>v.status==='approved').length;
-  document.getElementById('st-approved').textContent=vals.filter(v=>v.status==='approved'||v.status==='saved').length;
-  document.getElementById('st-uncertain').textContent=vals.filter(v=>v.status==='uncertain'||v.status==='found').length;
-  document.getElementById('st-skip').textContent=vals.filter(v=>v.status==='skipped').length;
-  document.getElementById('save-count').textContent=approved;
-  document.getElementById('footer-count').textContent=approved;
-  document.getElementById('btn-save').disabled=!approved;
+  const v=Object.values(results);
+  const saved=v.filter(x=>x.status==='saved').length;
+  const approved=v.filter(x=>x.status==='approved').length;
+  const uncertain=v.filter(x=>x.status==='found'||x.status==='uncertain').length;
+  const skipped=v.filter(x=>x.status==='skipped').length;
+  document.getElementById('st-ok').textContent=saved;
+  document.getElementById('st-u').textContent=approved;
+  document.getElementById('st-s').textContent=skipped;
+  document.getElementById('sc').textContent=approved;
+  document.getElementById('fc').textContent=approved;
+  document.getElementById('bs2').disabled=approved===0;
 }
-
 function updateProg(){
   const pct=total>0?Math.round(processed.size/total*100):0;
-  document.getElementById('prog').style.width=pct+'%';
-  document.getElementById('prog-label').textContent=processed.size+' van '+total+' verwerkt ('+pct+'%)';
+  document.getElementById('pf').style.width=pct+'%';
+  document.getElementById('pl').textContent=processed.size+' van '+total+' verwerkt ('+pct+'%)';
 }
-
-function log(msg,type){
+function lg(msg,type){
   const el=document.createElement('div');
-  el.className='log-line '+(type||'');
+  el.className='ll '+(type||'');
   el.textContent=new Date().toLocaleTimeString('nl')+' — '+msg;
-  const c=document.getElementById('log-entries');
-  c.insertBefore(el,c.firstChild);
+  const c=document.getElementById('log');c.insertBefore(el,c.firstChild);
 }
-
+function toast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+(type||'ok')+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 </script>
 </body>
