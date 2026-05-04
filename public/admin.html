@@ -94,6 +94,14 @@ td input,td select{width:100%;padding:4px 6px;border:1.5px solid var(--wine);bor
     <a href="/admin-scans.html" class="nav-link">Scans</a>
     <a href="/admin-restaurants.html" class="nav-link">Restaurants</a>
   </div>
+  <div style="display:flex;gap:14px;font-size:12px;color:rgba(255,255,255,0.75)">
+    <span>Totaal: <strong id="s-total" style="color:#C9A84C">–</strong></span>
+    <span>Pending: <strong id="s-pending" style="color:#C9A84C">–</strong></span>
+    <span>Rood: <strong id="s-red" style="color:#C9A84C">–</strong></span>
+    <span>Wit: <strong id="s-white" style="color:#C9A84C">–</strong></span>
+    <span>Sparkling: <strong id="s-sparkling" style="color:#C9A84C">–</strong></span>
+    <span>VP: <strong id="s-vintage" style="color:#C9A84C">–</strong></span>
+  </div>
 </nav>
 <div class="header" style="display:none">
   <h1>WineSteals Admin</h1>
@@ -229,7 +237,7 @@ async function loadStats(){
 async function loadPriced(){
   document.getElementById('priced-wrap').innerHTML='<div class="empty"><p>Laden...</p></div>';
   try{
-    const{data}=await api('/wines?price_source=neq.pending&order=name.asc&limit=10000&select=id,name,producer,vintage,region,country,appellation,grape,colour,market_price_eur,price_source');
+    const{data}=await api('/wines?price_source=neq.pending&order=name.asc&limit=10000&select=id,name,producer,vintage,region,country,appellation,grape,colour,market_price_eur,price_source,created_at');
     allPriced=data;
     // Bouw land en regio dropdowns
     buildFilterDropdowns();
@@ -310,7 +318,7 @@ function renderPriced(wines){
     {key:'region',label:'Regio'},
     {key:'country',label:'Land',w:'90px'},
     {key:'market_price_eur',label:'Prijs',w:'90px'},
-    {key:'price_source',label:'Bron',w:'80px'},
+    {key:'price_source',label:'Bron',w:'80px'},{key:'created_at',label:'Toegevoegd',w:'95px'},
     {key:'',label:'Acties',w:'130px'},
   ];
   let h='<table><thead><tr>';
