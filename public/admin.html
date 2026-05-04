@@ -67,7 +67,14 @@ td input,td select{width:100%;padding:4px 6px;border:1.5px solid var(--wine);bor
 .filter-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:12px;background:white;border-radius:8px;border:1px solid var(--border)}
 .filter-row label{font-size:12px;color:var(--muted);white-space:nowrap}
 .filter-row select,.filter-row input{padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:white}
-</style>
+
+    .admin-nav{background:var(--wine-dark);display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;position:sticky;top:0;z-index:100}
+    .nav-brand{color:white;font-family:'Playfair Display',serif;font-size:17px;text-decoration:none;font-weight:700}
+    .nav-links{display:flex;gap:4px}
+    .nav-link{color:rgba(255,255,255,0.7);text-decoration:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;transition:all .15s}
+    .nav-link:hover{color:white;background:rgba(255,255,255,0.1)}
+    .nav-link.active{color:white;background:rgba(255,255,255,0.18)}
+  </style>
 </head>
 <body>
 <div class="login-overlay" id="login-overlay">
@@ -79,7 +86,16 @@ td input,td select{width:100%;padding:4px 6px;border:1.5px solid var(--wine);bor
   </div>
 </div>
 
-<div class="header">
+<nav class="admin-nav">
+  <a class="nav-brand" href="/admin.html">🍷 WineSteals Admin</a>
+  <div class="nav-links">
+    <a href="/admin.html" class="nav-link active">Wijnen</a>
+    <a href="/admin-prices.html" class="nav-link">Price Finder</a>
+    <a href="/admin-scans.html" class="nav-link">Scans</a>
+    <a href="/admin-restaurants.html" class="nav-link">Restaurants</a>
+  </div>
+</nav>
+<div class="header" style="display:none">
   <h1>WineSteals Admin</h1>
   <div class="stats">
     <div class="stat"><strong id="s-total">–</strong>totaal</div>
