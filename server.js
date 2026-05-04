@@ -412,4 +412,56 @@ Wijnkaart van ${restaurant || 'restaurant'}:
   }
 });
 
+// Price lookup endpoint — gebruikt door admin-prices.html
+// Voorkomt CORS problemen door de Anthropic API call via de server te laten gaan
+app.post('/price-lookup', async (req, res) => {
+  const { wines } = req.body;
+  if (!wines || !Array.isArray(wines) || !wines.length) {
+    return res.status(400).json({ error: 'Geen wijnen opgegeven' });
+  }
+  if (wines.length > 30) {
+    return res.status(400).json({ error: 'Max 30 wijnen per batch' });
+  }
+
+  const wineList = wines.map((w, i) =>
+    `${i + 1}. "${w.name}" — ${w.producer || 'onbekend'}${w.vintage ? ', ' + w.vintage : ''}${w.country && w.country !== 'Unknown' ? ', ' + w.country : ''}`
+  ).join('\n');
+
+  const prompt = `Je bent een wijnprijsexpert. Geef de gemiddelde retailmarktprijs in EUR (Europese markt, 750ml) voor elke wijn.
+
+Geef ALLEEN een JSON array terug zonder uitleg of markdown. Elk object:
+{"index":N,"price":45.00,"confidence":"high/medium/low","note":"bron of toelichting max 8 woorden"}
+
+confidence:
+- "high": ken je goed, prijs ±10%
+- "medium": redelijk bekend, prijs ±25%
+- "low": weinig info of onbekende producent
+- Als je de wijn echt niet kent: price:null
+
+Wijnen:
+${wineList}
+
+JSON array:`;
+
+  try {
+    const message = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    let raw = message.content[0].text.trim()
+      .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+    let prices;
+    try { prices = JSON.parse(raw); }
+    catch { const m = raw.match(/\[[\s\S]*\]/); prices = m ? JSON.parse(m[0]) : []; }
+
+    res.json({ success: true, prices });
+  } catch (err) {
+    console.error('Price lookup error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`WineSteals server poort ${PORT}`));
