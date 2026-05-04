@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Scans — WineSteals Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--wine:#7B1C2E;--wine-dark:#4A0F1C;--gold:#C9A84C;--cream:#F8F4EE;--ink:#1A1208;--muted:#6B5E52;--border:rgba(123,28,46,0.15);--green:#2E7D32;--red:#C62828}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+.admin-nav{background:var(--wine-dark);display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;position:sticky;top:0;z-index:100}
+.nav-brand{color:white;font-family:'Playfair Display',serif;font-size:17px;text-decoration:none;font-weight:700}
+.nav-links{display:flex;gap:4px}
+.nav-link{color:rgba(255,255,255,0.7);text-decoration:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500}
+.nav-link:hover{color:white;background:rgba(255,255,255,0.1)}
+.nav-link.active{color:white;background:rgba(255,255,255,0.18)}
+.login-overlay{position:fixed;inset:0;background:var(--wine-dark);z-index:999;display:flex;align-items:center;justify-content:center}
+.login-overlay.hidden{display:none}
+.login-box{background:var(--cream);padding:48px 40px;border-radius:12px;width:360px;text-align:center}
+.login-box h2{font-family:'Playfair Display',serif;color:var(--wine-dark);margin-bottom:8px}
+.login-box p{color:var(--muted);font-size:14px;margin-bottom:24px}
+.login-box input{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;margin-bottom:16px;background:white}
+.login-box button{width:100%;padding:12px;background:var(--wine);color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer}
+.container{max-width:1200px;margin:0 auto;padding:28px 32px}
+.page-header{margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-header h1{font-family:'Playfair Display',serif;font-size:24px;color:var(--wine-dark)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
+.toolbar select,.toolbar input{padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;background:white}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500}
+.btn-secondary{background:white;color:var(--wine);border:1.5px solid var(--wine)}
+.summary-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+.sum-card{background:white;border-radius:9px;border:1px solid var(--border);padding:18px}
+.sum-card .num{font-size:28px;font-weight:700;color:var(--wine-dark);font-family:'Playfair Display',serif}
+.sum-card .lbl{font-size:12px;color:var(--muted);margin-top:3px}
+table{width:100%;border-collapse:collapse;font-size:13px;background:white;border-radius:9px;overflow:hidden;border:1px solid var(--border)}
+th{text-align:left;padding:10px 12px;background:var(--wine-dark);color:white;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:10px 12px;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(123,28,46,.02)}
+.score-badge{display:inline-block;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white}
+.empty{text-align:center;padding:60px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <h2>WineSteals</h2>
+    <p>Admin toegang vereist</p>
+    <input type="password" id="pw-input" placeholder="Wachtwoord" onkeydown="if(event.key==='Enter')checkPw()"/>
+    <button onclick="checkPw()">Inloggen</button>
+  </div>
+</div>
+
+<nav class="admin-nav">
+  <a class="nav-brand" href="/admin.html">🍷 WineSteals Admin</a>
+  <div class="nav-links">
+    <a href="/admin.html" class="nav-link">Wijnen</a>
+    <a href="/admin-prices.html" class="nav-link">Price Finder</a>
+    <a href="/admin-scans.html" class="nav-link active">Scans</a>
+    <a href="/admin-restaurants.html" class="nav-link">Restaurants</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Scan resultaten</h1>
+    <button class="btn btn-secondary" onclick="load()">↻ Vernieuwen</button>
+  </div>
+
+  <div class="summary-cards" id="summary-cards">
+    <div class="sum-card"><div class="num" id="s-total">–</div><div class="lbl">Totaal steals</div></div>
+    <div class="sum-card"><div class="num" id="s-restaurants">–</div><div class="lbl">Restaurants</div></div>
+    <div class="sum-card"><div class="num" id="s-avg">–</div><div class="lbl">Gem. steal score</div></div>
+    <div class="sum-card"><div class="num" id="s-best">–</div><div class="lbl">Beste steal score</div></div>
+  </div>
+
+  <div class="toolbar">
+    <select id="f-restaurant" onchange="filter()"><option value="">Alle restaurants</option></select>
+    <select id="f-days" onchange="filter()">
+      <option value="30">Afgelopen 30 dagen</option>
+      <option value="90" selected>Afgelopen 90 dagen</option>
+      <option value="365">Afgelopen jaar</option>
+      <option value="9999">Alles</option>
+    </select>
+    <input type="text" id="f-search" placeholder="Zoek wijn..." oninput="filter()" style="min-width:180px"/>
+  </div>
+
+  <div id="results-wrap"><div class="empty"><p>Laden...</p></div></div>
+</div>
+
+<script>
+const PW='winesteals2026';
+const SB='https://kdhczlabjecqxlyuxprl.supabase.co/rest/v1';
+const SBKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
+
+function checkPw(){
+  if(document.getElementById('pw-input').value===PW){localStorage.setItem('ws_aa',btoa(PW));document.getElementById('login-overlay').classList.add('hidden');load();}
+  else document.getElementById('pw-input').style.borderColor='red';
+}
+if(localStorage.getItem('ws_aa')===btoa(PW)){document.getElementById('login-overlay').classList.add('hidden');load();}
+
+let allScans=[];
+
+async function load(){
+  const days=parseInt(document.getElementById('f-days')?.value)||90;
+  const since=new Date(Date.now()-days*86400000).toISOString();
+  const r=await fetch(SB+'/scan_results?is_steal=eq.true&scanned_at=gte.'+since+'&order=steal_score.desc&limit=500&select=wine_name,producer,vintage,restaurant_price,market_price,steal_score,colour,region,scanned_at,restaurant_id,restaurants(name,city)',{
+    headers:{'apikey':SBKEY,'Authorization':'Bearer '+SBKEY}
+  });
+  allScans=await r.json();
+  if(!Array.isArray(allScans))allScans=[];
+
+  // Stats
+  const scores=allScans.map(s=>s.steal_score||0);
+  document.getElementById('s-total').textContent=allScans.length;
+  const rests=new Set(allScans.map(s=>s.restaurant_id).filter(Boolean));
+  document.getElementById('s-restaurants').textContent=rests.size;
+  document.getElementById('s-avg').textContent=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):'–';
+  document.getElementById('s-best').textContent=scores.length?Math.max(...scores):'–';
+
+  // Restaurant filter
+  const restSelect=document.getElementById('f-restaurant');
+  const restNames=[...new Set(allScans.map(s=>s.restaurants?.name).filter(Boolean))].sort();
+  restSelect.innerHTML='<option value="">Alle restaurants</option>'+restNames.map(n=>`<option>${n}</option>`).join('');
+
+  filter();
+}
+
+function filter(){
+  const q=(document.getElementById('f-search')?.value||'').toLowerCase();
+  const r=document.getElementById('f-restaurant')?.value||'';
+  const filtered=allScans.filter(s=>
+    (!q||((s.wine_name||'')+(s.producer||'')).toLowerCase().includes(q))&&
+    (!r||(s.restaurants?.name||'')===r)
+  );
+  render(filtered);
+}
+
+function render(data){
+  const el=document.getElementById('results-wrap');
+  if(!data.length){el.innerHTML='<div class="empty"><p>Geen scan resultaten gevonden</p></div>';return;}
+  let h='<table><thead><tr><th>Score</th><th>Wijn</th><th>Restaurant</th><th>Rest.prijs</th><th>Marktprijs</th><th>Besparing</th><th>Datum</th></tr></thead><tbody>';
+  data.forEach(s=>{
+    const saving=s.market_price&&s.restaurant_price?Math.round(s.market_price-s.restaurant_price):null;
+    const sc=s.steal_score||0;
+    const bg=sc>=40?'#2E7D32':sc>=20?'#F57F17':'#9E9E9E';
+    const date=new Date(s.scanned_at).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'2-digit'});
+    h+=`<tr>
+      <td><div class="score-badge" style="background:${bg}">${sc}</div></td>
+      <td><strong>${esc(s.wine_name)}</strong>${s.vintage?'<br><small style="color:var(--muted)">'+s.vintage+'</small>':''}</td>
+      <td>${esc(s.restaurants?.name||'–')}<br><small style="color:var(--muted)">${esc(s.restaurants?.city||'')}</small></td>
+      <td><strong>€${s.restaurant_price}</strong></td>
+      <td>€${s.market_price||'–'}</td>
+      <td>${saving?'<span style="color:var(--green);font-weight:600">-€'+saving+'</span>':'–'}</td>
+      <td style="color:var(--muted);font-size:12px">${date}</td>
+    </tr>`;
+  });
+  h+='</tbody></table>';
+  el.innerHTML=h;
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>
