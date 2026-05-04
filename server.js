@@ -55,23 +55,40 @@ function scoreMatch(w, normName, normProducer, nameParts, producerParts) {
   const wp = normalize(w.producer);
   const aliases = (w.search_aliases || []).map(a => normalize(a));
 
-  if (wn === normName) score += 20;
-  else if (wn.includes(normName) || normName.includes(wn)) score += 12;
-  else { score += nameParts.filter(p => p.length > 2 && wn.includes(p)).length * 3; }
+  // Naam score — strenger: alleen exacte en sterke matches tellen
+  if (wn === normName) score += 25;
+  else if (wn.includes(normName) || normName.includes(wn)) {
+    // Voorkom false positives: "Palmer" matcht zowel "Alter Ego de Palmer" als "Chateau Palmer"
+    // Als de zoekterm beduidend korter is dan de DB-naam, lagere score
+    const lenRatio = Math.min(normName.length, wn.length) / Math.max(normName.length, wn.length);
+    score += Math.round(12 * lenRatio);
+  } else {
+    // Gedeeltelijke match op losse woorden — alleen woorden > 3 chars tellen
+    const hits = nameParts.filter(p => p.length > 3 && wn.includes(p));
+    // Maar straf af als er woorden in de DB-naam zijn die niet in de zoeknaam zitten
+    const dbWords = wn.split(' ').filter(p => p.length > 3);
+    const missed = dbWords.filter(p => !normName.includes(p)).length;
+    score += hits.length * 3 - missed * 2;
+  }
 
+  // Alias score
   for (const alias of aliases) {
     if (alias === normName || alias.includes(normName) || normName.includes(alias)) { score += 15; break; }
-    if (nameParts.some(p => p.length > 2 && alias.includes(p))) { score += 8; break; }
+    if (nameParts.some(p => p.length > 3 && alias.includes(p))) { score += 8; break; }
   }
 
+  // Producent score — zwaarder gewogen
   if (normProducer) {
-    if (wp === normProducer) score += 15;
-    else if (wp.includes(normProducer) || normProducer.includes(wp)) score += 10;
+    if (wp === normProducer) score += 18;
+    else if (wp.includes(normProducer) || normProducer.includes(wp)) score += 12;
     else {
       const phits = producerParts.filter(p => p.length > 2 && wp.includes(p));
-      score += phits.length > 0 ? phits.length * 4 : -10;
+      score += phits.length > 0 ? phits.length * 5 : -15; // hogere penalty voor verkeerde producent
     }
   }
+
+  // Minimum drempel: als de naam totaal niet klopt, geen match
+  if (score < 0) score = 0;
   return score;
 }
 
@@ -193,6 +210,52 @@ async function saveScanResults(restaurantId, wines) {
   }
 }
 
+// Sla niet-gematchte wijnen op als pending — maar check eerst op dubbelen
+async function saveUnmatchedAsPending(wines) {
+  const unmatched = wines.filter(w => !w.matched && w.name && w.name.length > 1);
+  if (!unmatched.length) return;
+
+  try {
+    // Bouw een OR query om bestaande wijnen te vinden
+    const checks = unmatched.map(w => {
+      const nm = encodeURIComponent(w.name.trim());
+      const pr = encodeURIComponent((w.producer || '').trim());
+      return `name.ilike.${nm},producer.ilike.${pr}`;
+    });
+
+    // Check per batch van 10
+    const BATCH = 10;
+    const toInsert = [];
+    for (let i = 0; i < unmatched.length; i += BATCH) {
+      const batch = unmatched.slice(i, i + BATCH);
+      for (const w of batch) {
+        try {
+          const nm = encodeURIComponent(w.name.trim());
+          const existing = await sbGet(`wines?name=ilike.${nm}&vintage=eq.${w.vintage || 'null'}&limit=1&select=id`);
+          if (!existing.length) {
+            toInsert.push({
+              name: w.name.trim(),
+              producer: w.producer?.trim() || null,
+              vintage: w.vintage || null,
+              colour: w.colour || null,
+              region: w.region?.split(' · ')[0] || null,
+              country: w.region?.split(' · ')[1] || null,
+              price_source: 'pending'
+            });
+          }
+        } catch(e) { /* skip */ }
+      }
+    }
+
+    if (toInsert.length > 0) {
+      await sbPost('wines', toInsert);
+      console.log(`Saved ${toInsert.length} new pending wines (skipped ${unmatched.length - toInsert.length} duplicates)`);
+    }
+  } catch(e) {
+    console.warn('saveUnmatchedAsPending error:', e.message);
+  }
+}
+
 // ── PUBLIEKE ENDPOINTS ──
 
 // Haal beste actieve steals op (voor homepage widget)
@@ -236,10 +299,12 @@ app.post('/scan', async (req, res) => {
 Regels:
 - Geef ALLEEN een JSON array terug, geen uitleg of markdown
 - Negeer: sectieheaders, beschrijvingen, cocktails, bier, water, aperitief
-- Elk object: name, producer, vintage (null als NV/geen jaargang), price (FLESPRIJS als getal)
+- Elk object: name (wijnnaam), producer (producent/wijnhuis), vintage (null als NV/geen jaargang), price (FLESPRIJS als getal)
 - Bij twee prijzen (glas + fles): neem ALTIJD de hoogste = flesprijs
 - Alleen glasprijs zonder flesprijs: sla over
 - Geen duplicaten
+- BELANGRIJK naam vs producent: de producent is het wijnhuis/domaine (bijv. "De Venoge", "Bollinger", "Domaine Leflaive"). De naam is het specifieke product/cuvée (bijv. "Brut Rosé", "Corton-Charlemagne", "Millésimé"). Als een wijn alleen staat als "De Venoge Brut" dan is producer="De Venoge" en name="Brut". Niet andersom.
+- Bij champagne: het wijnhuis is bijna altijd de producent, de cuvée/stijl is de naam
 
 Wijnkaart van ${restaurant || 'restaurant'}:
 `;
@@ -329,6 +394,8 @@ Wijnkaart van ${restaurant || 'restaurant'}:
         saveScanResults(restaurantId, results);
       }).catch(e => console.warn('save error:', e.message));
     }
+    // Sla niet-gematchte wijnen op als pending (met dubbelen-check)
+    saveUnmatchedAsPending(results).catch(e => console.warn('pending save error:', e.message));
 
     res.json({
       success: true,
