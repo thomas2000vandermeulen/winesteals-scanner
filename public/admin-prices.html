@@ -126,19 +126,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
   </div>
 
   <div class="setup-panel">
-    <h3>Anthropic API Key</h3>
+    <h3>Instellingen</h3>
     <div class="setup-row">
-      <div class="fg">
-        <label>API Key</label>
-        <input type="password" id="api-key" placeholder="sk-ant-api03-..."/>
-      </div>
-      <div class="fg" style="max-width:120px">
+      <div class="fg" style="max-width:140px">
         <label>Batch grootte</label>
         <input type="number" id="batch-size" value="15" min="1" max="30"/>
       </div>
       <button class="btn btn-primary" onclick="initFinder()">Starten →</button>
     </div>
-    <p style="font-size:12px;color:var(--muted);margin-top:10px">Key wordt niet opgeslagen. Kosten: ~€0.001 per batch. Voor alle ~1965 wijnen: ca. €0.50 totaal.</p>
+    <p style="font-size:12px;color:var(--muted);margin-top:10px">Prijzen worden opgezocht via de WineSteals server. Kosten: ~€0.001 per batch van 15 wijnen.</p>
   </div>
 
   <div id="finder-app" style="display:none">
@@ -202,9 +198,7 @@ async function sbPatch(p,b){
 }
 
 async function initFinder(){
-  APIKEY=document.getElementById('api-key').value.trim();
   BATCH=parseInt(document.getElementById('batch-size').value)||15;
-  if(!APIKEY||!APIKEY.startsWith('sk-ant')){alert('Voer een geldige Anthropic API key in');return;}
   document.getElementById('finder-app').style.display='block';
   document.getElementById('save-footer').style.display='flex';
   await loadWines();
@@ -283,16 +277,14 @@ ${wineList}
 JSON array:`;
 
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    const resp=await fetch('/price-lookup',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+      body:JSON.stringify({wines:toSearch.map(w=>({name:w.name,producer:w.producer,vintage:w.vintage,country:w.country}))})
     });
-    if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||'API '+resp.status);}
+    if(!resp.ok){const e=await resp.json();throw new Error(e.error||'API '+resp.status);}
     const dat=await resp.json();
-    let raw=dat.content[0].text.trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
-    let prices;
-    try{prices=JSON.parse(raw);}catch{const m=raw.match(/\[[\s\S]*\]/);prices=m?JSON.parse(m[0]):[];}
+    const prices=dat.prices||[];
 
     let nFound=0,nUncertain=0,nNot=0;
     prices.forEach(p=>{
