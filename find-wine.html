@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Find a wine — WineSteals</title>
+<meta name="description" content="Search which restaurants serve your favorite wine, with current prices and steal scores."/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --wine:#7B1C2E;--wine-dark:#4A0F1C;--gold:#C9A84C;--cream:#F8F4EE;
+  --ink:#1A1208;--muted:#6B5E52;--border:rgba(123,28,46,0.15);
+  --green:#2E7D32;--green-light:#E8F5E9;--orange:#E65100
+}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+
+.site-header{background:rgba(248,244,238,0.95);border-bottom:1px solid var(--border);padding:20px 32px;position:sticky;top:0;z-index:10;backdrop-filter:blur(8px)}
+.header-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.brand{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--wine-dark);text-decoration:none;display:flex;align-items:center;gap:8px}
+.brand-dot{width:8px;height:8px;background:var(--gold);border-radius:50%}
+.header-right{display:flex;gap:20px;align-items:center}
+.nav-links{display:flex;gap:24px;align-items:center}
+.nav-links a{color:var(--ink);text-decoration:none;font-size:13px;font-weight:500;letter-spacing:.5px;text-transform:uppercase}
+.nav-links a:hover{color:var(--wine)}
+.nav-links a.current{color:var(--wine)}
+
+.lang-toggle{display:flex;gap:0;border:1.5px solid var(--border);border-radius:6px;overflow:hidden}
+.lang-toggle button{padding:5px 12px;background:transparent;border:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);font-family:inherit;transition:all .15s}
+.lang-toggle button.active{background:var(--wine-dark);color:white}
+.lang-toggle button:not(.active):hover{color:var(--ink)}
+
+.hero{padding:60px 32px 40px;text-align:center;background:linear-gradient(180deg,var(--cream) 0%,#F4EDE2 100%)}
+.hero-inner{max-width:780px;margin:0 auto}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(32px,5vw,52px);line-height:1.1;color:var(--wine-dark);margin-bottom:14px;font-weight:700}
+.hero h1 em{font-style:italic;color:var(--wine)}
+.hero p{font-size:17px;color:var(--muted);max-width:520px;margin:0 auto 32px;line-height:1.5}
+
+.search-wrap{max-width:680px;margin:0 auto;position:relative}
+.search-box{display:flex;background:white;border:2px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(123,28,46,0.08);transition:border-color .2s}
+.search-box:focus-within{border-color:var(--wine);box-shadow:0 4px 24px rgba(123,28,46,0.15)}
+.search-input{flex:1;padding:18px 22px;border:none;outline:none;font-size:16px;font-family:'DM Sans',sans-serif;background:transparent}
+.search-input::placeholder{color:#B8AEA3}
+.search-btn{padding:0 32px;background:var(--wine);color:white;border:none;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;transition:background .15s}
+.search-btn:hover{background:var(--wine-dark)}
+.search-hints{margin-top:12px;font-size:13px;color:var(--muted);display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.hint-chip{padding:5px 12px;background:white;border:1px solid var(--border);border-radius:14px;cursor:pointer;transition:all .15s}
+.hint-chip:hover{background:var(--wine);color:white;border-color:var(--wine)}
+
+.results-wrap{max-width:900px;margin:0 auto;padding:0 32px 60px}
+.results-meta{font-size:13px;color:var(--muted);margin-bottom:20px;text-transform:uppercase;letter-spacing:.5px}
+.results-meta strong{color:var(--ink)}
+
+.wine-group{background:white;border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:18px}
+.wine-header{padding:18px 24px;background:linear-gradient(135deg,#FCFAF7 0%,#F8F4EE 100%);border-bottom:1px solid var(--border)}
+.wine-name{font-family:'Playfair Display',serif;font-size:20px;color:var(--wine-dark);font-weight:700;margin-bottom:4px}
+.wine-name em{font-style:italic;color:var(--wine)}
+.wine-meta{font-size:13px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.wine-meta .dot{color:#D4C7B8}
+.wine-meta .market-price{padding:3px 10px;background:rgba(123,28,46,0.06);color:var(--wine);border-radius:10px;font-weight:600;font-family:'DM Mono',monospace}
+
+.restaurants-list{padding:8px}
+.restaurant-row{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:10px;transition:background .15s}
+.restaurant-row:hover{background:#FAF6EF}
+.score-circle{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:14px;flex-shrink:0;font-family:'DM Mono',monospace}
+.score-high{background:linear-gradient(135deg,#2E7D32,#1B5E20)}
+.score-medium{background:linear-gradient(135deg,#F57F17,#E65100)}
+.score-low{background:linear-gradient(135deg,#757575,#424242)}
+.restaurant-info{flex:1;min-width:0}
+.restaurant-name{font-weight:600;font-size:15px;color:var(--ink)}
+.restaurant-meta{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.last-scan{padding:2px 8px;background:#F5F0E8;border-radius:10px;font-size:11px}
+.price-info{text-align:right;flex-shrink:0}
+.rest-price{font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--ink)}
+.saving{font-size:12px;color:var(--green);font-weight:500;margin-top:2px}
+.no-saving{font-size:12px;color:var(--muted);margin-top:2px}
+
+.empty{text-align:center;padding:80px 32px;color:var(--muted)}
+.empty h3{font-family:'Playfair Display',serif;font-size:24px;color:var(--wine-dark);margin-bottom:8px;font-style:italic}
+.empty p{font-size:15px;max-width:380px;margin:0 auto 20px}
+.empty a{color:var(--wine);text-decoration:none}
+
+.spinner{display:inline-block;width:36px;height:36px;border:3px solid rgba(123,28,46,0.15);border-top-color:var(--wine);border-radius:50%;animation:spin 0.9s linear infinite;margin-bottom:14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.suggestions{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--border);border-radius:12px;margin-top:6px;box-shadow:0 8px 24px rgba(0,0,0,0.08);max-height:340px;overflow-y:auto;z-index:20;display:none}
+.suggestion-item{padding:11px 18px;cursor:pointer;border-bottom:1px solid #F5F0E8;font-size:14px;display:flex;align-items:center;gap:10px;transition:background .12s}
+.suggestion-item:last-child{border-bottom:none}
+.suggestion-item:hover,.suggestion-item.active{background:#FAF6EF}
+.suggestion-name{font-weight:500}
+.suggestion-meta{font-size:12px;color:var(--muted);margin-left:auto}
+
+footer{padding:40px 32px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
+footer a{color:var(--wine);text-decoration:none}
+
+@media (max-width:640px){
+  .hero{padding:40px 20px 30px}
+  .search-input{padding:14px 16px;font-size:15px}
+  .search-btn{padding:0 20px;font-size:13px}
+  .wine-header{padding:14px 16px}
+  .restaurant-row{padding:10px 12px}
+  .results-wrap,.site-header{padding-left:20px;padding-right:20px}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="brand"><span class="brand-dot"></span>WineSteals</a>
+    <div class="header-right">
+      <nav class="nav-links">
+        <a href="/" data-i18n="nav-home">Home</a>
+        <a href="/scan.html" data-i18n="nav-scan">Scan</a>
+        <a href="/find-wine.html" class="current" data-i18n="nav-find">Find a wine</a>
+      </nav>
+      <div class="lang-toggle">
+        <button id="lang-en" onclick="setLang('en')">EN</button>
+        <button id="lang-nl" onclick="setLang('nl')">NL</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <h1 data-i18n-html="hero-title">Find your <em>favorite wine</em><br/>on a wine list</h1>
+    <p data-i18n="hero-sub">Type the name of a wine and discover which restaurants serve it, with current prices and how much you save.</p>
+
+    <div class="search-wrap">
+      <div class="search-box">
+        <input type="text" class="search-input" id="search-input" data-i18n-placeholder="search-placeholder" placeholder="e.g. Château Palmer, Dönnhoff, Chablis..." autocomplete="off" autofocus/>
+        <button class="search-btn" onclick="search()" data-i18n="search-btn">Search</button>
+      </div>
+      <div class="suggestions" id="suggestions"></div>
+      <div class="search-hints">
+        <span class="hint-chip" onclick="searchFor('Palmer')">Palmer</span>
+        <span class="hint-chip" onclick="searchFor('Dönnhoff')">Dönnhoff</span>
+        <span class="hint-chip" onclick="searchFor('Chablis')">Chablis</span>
+        <span class="hint-chip" onclick="searchFor('Barolo')">Barolo</span>
+        <span class="hint-chip" onclick="searchFor('Champagne')">Champagne</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<main class="results-wrap" id="results"></main>
+
+<footer>
+  <p>WineSteals · <a href="/" data-i18n="nav-home">Home</a> · <a href="/scan.html" data-i18n="footer-scan">Scan a wine list</a></p>
+</footer>
+
+<script>
+// === TRANSLATIONS ===
+const I18N = {
+  en: {
+    'nav-home': 'Home',
+    'nav-scan': 'Scan',
+    'nav-find': 'Find a wine',
+    'hero-title': 'Find your <em>favorite wine</em><br/>on a wine list',
+    'hero-sub': 'Type the name of a wine and discover which restaurants serve it, with current prices and how much you save.',
+    'search-placeholder': 'e.g. Château Palmer, Dönnhoff, Chablis...',
+    'search-btn': 'Search',
+    'footer-scan': 'Scan a wine list',
+    'searching': 'Searching for restaurants serving this wine...',
+    'no-results-title': 'No results',
+    'no-results-text': 'We haven\'t found "{q}" on a scanned wine list yet. Try another wine or producer.',
+    'no-results-upload': 'Have a wine list with this wine on it?',
+    'no-results-upload-link': 'Upload it here',
+    'no-results-upload-end': 'and help grow the database.',
+    'wines-found': '<strong>{n}</strong> {w} found in <strong>{r}</strong> {rw}',
+    'wine-singular': 'wine',
+    'wine-plural': 'wines',
+    'restaurant-singular': 'restaurant',
+    'restaurant-plural': 'restaurants',
+    'market-price': 'Market price ~€',
+    'cheaper': '€{n} cheaper',
+    'market-rate': 'market rate',
+    'scanned': 'Scanned',
+    'error-title': 'Something went wrong'
+  },
+  nl: {
+    'nav-home': 'Home',
+    'nav-scan': 'Scan',
+    'nav-find': 'Vind een wijn',
+    'hero-title': 'Vind je <em>favoriete wijn</em><br/>op een kaart',
+    'hero-sub': 'Typ de naam van een wijn en ontdek welke restaurants hem serveren, met actuele prijzen en hoeveel je bespaart.',
+    'search-placeholder': 'bijv. Château Palmer, Dönnhoff, Chablis...',
+    'search-btn': 'Zoeken',
+    'footer-scan': 'Scan een wijnkaart',
+    'searching': 'Zoeken naar restaurants met deze wijn...',
+    'no-results-title': 'Geen resultaten',
+    'no-results-text': 'We hebben "{q}" nog niet gevonden in een gescande wijnkaart. Probeer een andere wijn of producent.',
+    'no-results-upload': 'Heb je een wijnkaart waar deze op staat?',
+    'no-results-upload-link': 'Upload hem hier',
+    'no-results-upload-end': 'en help de database groeien.',
+    'wines-found': '<strong>{n}</strong> {w} gevonden in <strong>{r}</strong> {rw}',
+    'wine-singular': 'wijn',
+    'wine-plural': 'wijnen',
+    'restaurant-singular': 'restaurant',
+    'restaurant-plural': 'restaurants',
+    'market-price': 'Marktprijs ~€',
+    'cheaper': '€{n} goedkoper',
+    'market-rate': 'marktconform',
+    'scanned': 'Gescand',
+    'error-title': 'Er ging iets mis'
+  }
+};
+
+let currentLang = localStorage.getItem('ws_lang') || (navigator.language?.startsWith('nl') ? 'nl' : 'en');
+
+function t(key, vars) {
+  let txt = I18N[currentLang][key] || I18N.en[key] || key;
+  if (vars) for (const k in vars) txt = txt.split('{' + k + '}').join(vars[k]);
+  return txt;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('ws_lang', lang);
+  document.documentElement.lang = lang;
+  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+  document.getElementById('lang-nl').classList.toggle('active', lang === 'nl');
+  document.title = (lang === 'nl' ? 'Vind een wijn' : 'Find a wine') + ' — WineSteals';
+  
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (I18N[lang][key]) el.textContent = I18N[lang][key];
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.dataset.i18nHtml;
+    if (I18N[lang][key]) el.innerHTML = I18N[lang][key];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.dataset.i18nPlaceholder;
+    if (I18N[lang][key]) el.placeholder = I18N[lang][key];
+  });
+}
+
+// === SEARCH LOGIC ===
+const SB='https://kdhczlabjecqxlyuxprl.supabase.co/rest/v1';
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
+
+let suggestionTimeout;
+const searchInput = document.getElementById('search-input');
+const suggestionsEl = document.getElementById('suggestions');
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(suggestionTimeout);
+  const q = searchInput.value.trim();
+  if (q.length < 2) { suggestionsEl.style.display = 'none'; return; }
+  suggestionTimeout = setTimeout(() => fetchSuggestions(q), 250);
+});
+
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { suggestionsEl.style.display = 'none'; search(); }
+  else if (e.key === 'Escape') { suggestionsEl.style.display = 'none'; }
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) suggestionsEl.style.display = 'none';
+});
+
+async function fetchSuggestions(q) {
+  try {
+    const url = SB + '/scan_results?or=(wine_name.ilike.*' + encodeURIComponent(q) + '*,producer.ilike.*' + encodeURIComponent(q) + '*)&select=wine_name,producer,vintage&limit=30';
+    const r = await fetch(url, { headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY } });
+    const data = await r.json();
+    if (!Array.isArray(data)) return;
+    
+    const seen = new Set();
+    const unique = [];
+    for (const w of data) {
+      const k = (w.wine_name || '').toLowerCase() + '|' + (w.producer || '').toLowerCase();
+      if (!seen.has(k) && w.wine_name) {
+        seen.add(k);
+        unique.push(w);
+      }
+      if (unique.length >= 8) break;
+    }
+    
+    if (!unique.length) { suggestionsEl.style.display = 'none'; return; }
+    suggestionsEl.innerHTML = unique.map(w => `
+      <div class="suggestion-item" onclick="searchFor('${esc(w.wine_name).replace(/'/g, "\\'")}')">
+        <span class="suggestion-name">${esc(w.wine_name)}</span>
+        <span class="suggestion-meta">${esc(w.producer || '')}</span>
+      </div>
+    `).join('');
+    suggestionsEl.style.display = 'block';
+  } catch(e) {
+    console.warn('suggestions error', e);
+  }
+}
+
+function searchFor(q) {
+  searchInput.value = q;
+  suggestionsEl.style.display = 'none';
+  search();
+}
+
+async function search() {
+  const q = searchInput.value.trim();
+  if (q.length < 2) return;
+  
+  const resultsEl = document.getElementById('results');
+  resultsEl.innerHTML = '<div class="empty"><div class="spinner"></div><p>' + t('searching') + '</p></div>';
+  
+  try {
+    const url = SB + '/scan_results?or=(wine_name.ilike.*' + encodeURIComponent(q) + '*,producer.ilike.*' + encodeURIComponent(q) + '*)&select=wine_name,producer,vintage,restaurant_price,market_price,steal_score,scanned_at,colour,restaurants(id,name,city,last_scanned_at)&order=steal_score.desc&limit=100';
+    const r = await fetch(url, { headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY } });
+    const data = await r.json();
+    
+    if (!Array.isArray(data) || !data.length) {
+      const scanLink = currentLang === 'nl' ? '/scan.html' : '/scan.html';
+      resultsEl.innerHTML = `<div class="empty">
+        <h3>${t('no-results-title')}</h3>
+        <p>${t('no-results-text', {q: esc(q)})}</p>
+        <p style="font-size:13px;margin-top:16px">${t('no-results-upload')} <a href="${scanLink}">${t('no-results-upload-link')}</a> ${t('no-results-upload-end')}</p>
+      </div>`;
+      return;
+    }
+    
+    const grouped = {};
+    for (const s of data) {
+      const k = (s.wine_name || '').toLowerCase().trim() + '|' + (s.producer || '').toLowerCase().trim() + '|' + (s.vintage || '');
+      if (!grouped[k]) grouped[k] = { wine_name: s.wine_name, producer: s.producer, vintage: s.vintage, market_price: s.market_price, colour: s.colour, restaurants: [] };
+      const existing = grouped[k].restaurants.find(x => x.id === s.restaurants?.id);
+      if (!existing && s.restaurants) {
+        grouped[k].restaurants.push({
+          id: s.restaurants.id,
+          name: s.restaurants.name,
+          city: s.restaurants.city,
+          price: s.restaurant_price,
+          score: s.steal_score,
+          scanned: s.scanned_at
+        });
+      }
+      if (s.market_price && (!grouped[k].market_price || s.market_price > grouped[k].market_price)) grouped[k].market_price = s.market_price;
+    }
+    
+    const wines = Object.values(grouped).sort((a, b) => b.restaurants.length - a.restaurants.length);
+    const totalRestaurants = new Set(data.map(s => s.restaurants?.id).filter(Boolean)).size;
+    
+    const wineWord = wines.length === 1 ? t('wine-singular') : t('wine-plural');
+    const restWord = totalRestaurants === 1 ? t('restaurant-singular') : t('restaurant-plural');
+    
+    let html = `<div class="results-meta">${t('wines-found', {n: wines.length, w: wineWord, r: totalRestaurants, rw: restWord})}</div>`;
+    
+    for (const w of wines) {
+      const restSorted = w.restaurants.sort((a, b) => (b.score || 0) - (a.score || 0));
+      html += `<div class="wine-group">
+        <div class="wine-header">
+          <div class="wine-name">${esc(w.wine_name)}${w.vintage ? ` <em>${w.vintage}</em>` : ''}</div>
+          <div class="wine-meta">
+            ${w.producer ? `<span>${esc(w.producer)}</span><span class="dot">·</span>` : ''}
+            ${w.colour ? `<span>${esc(w.colour)}</span><span class="dot">·</span>` : ''}
+            ${w.market_price ? `<span class="market-price">${t('market-price')}${w.market_price}</span>` : ''}
+          </div>
+        </div>
+        <div class="restaurants-list">
+          ${restSorted.map(r => {
+            const score = r.score || 0;
+            const scoreClass = score >= 30 ? 'score-high' : score >= 15 ? 'score-medium' : 'score-low';
+            const saving = w.market_price && r.price ? Math.round(w.market_price - r.price) : null;
+            const scanDate = r.scanned ? new Date(r.scanned).toLocaleDateString(currentLang === 'nl' ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'short' }) : '';
+            return `<div class="restaurant-row">
+              <div class="score-circle ${scoreClass}">${score}</div>
+              <div class="restaurant-info">
+                <div class="restaurant-name">${esc(r.name || '—')}</div>
+                <div class="restaurant-meta">
+                  ${r.city ? `<span>${esc(r.city)}</span>` : ''}
+                  ${scanDate ? `<span class="last-scan">${t('scanned')} ${scanDate}</span>` : ''}
+                </div>
+              </div>
+              <div class="price-info">
+                <div class="rest-price">€${r.price}</div>
+                ${saving > 0 ? `<div class="saving">${t('cheaper', {n: saving})}</div>` : `<div class="no-saving">${t('market-rate')}</div>`}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }
+    
+    resultsEl.innerHTML = html;
+  } catch(e) {
+    resultsEl.innerHTML = `<div class="empty"><h3>${t('error-title')}</h3><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// Init taal bij laden
+setLang(currentLang);
+</script>
+</body>
+</html>
