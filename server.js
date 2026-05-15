@@ -40,63 +40,120 @@ async function sbPatch(endpoint, body) {
   if (!res.ok) throw new Error(`Supabase PATCH ${res.status}`);
 }
 
+// Verwijder ALLEEN echte lidwoorden/voorzetsels — NIET cuvée-woorden zoals "petit", "blanc", "rouge"
+const STOP_WORDS = new Set(['chateau','domaine','domain','maison','cave','cellier','clos','domaines',
+  'de','du','des','d','l','le','la','les','et','and','von','van','del','della','di','dei','al','the']);
+
+// Behoud altijd: petit, grand, blanc, rouge, rose, brut, sec, demi, village, premier, cru, etc.
+// Die zijn essentieel voor het onderscheid tussen wijnen van hetzelfde huis
+
 function normalize(s) {
   if (!s) return '';
   return s.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/\b(chateau|domaine|domain|maison|clos|les|la|le|de|du|des|d|l|et|and|von|van|del|della|di|dei)\b/g, '')
     .replace(/[^a-z0-9 ]/g, ' ')
     .replace(/\s+/g, ' ').trim();
 }
 
+function normalizeNoStop(s) {
+  if (!s) return '';
+  return normalize(s).split(' ')
+    .filter(w => !STOP_WORDS.has(w))
+    .join(' ').trim();
+}
+
+function tokenize(s) {
+  return normalize(s).split(' ').filter(w => w.length > 1);
+}
+
+function tokenizeSignificant(s) {
+  return normalize(s).split(' ').filter(w => w.length > 1 && !STOP_WORDS.has(w));
+}
+
 function scoreMatch(w, normName, normProducer, nameParts, producerParts) {
   let score = 0;
-  const wn = normalize(w.name);
-  const wp = normalize(w.producer);
+
+  const dbName = normalize(w.name);
+  const dbProducer = normalize(w.producer || '');
+  const dbNameTokens = tokenizeSignificant(w.name);
+  const dbProducerTokens = tokenizeSignificant(w.producer || '');
   const aliases = (w.search_aliases || []).map(a => normalize(a));
 
-  // Naam score — strenger: alleen exacte en sterke matches tellen
-  if (wn === normName) score += 25;
-  else if (wn.includes(normName) || normName.includes(wn)) {
-    // Voorkom false positives: "Palmer" matcht zowel "Alter Ego de Palmer" als "Chateau Palmer"
-    // Als de zoekterm beduidend korter is dan de DB-naam, lagere score
-    const lenRatio = Math.min(normName.length, wn.length) / Math.max(normName.length, wn.length);
-    score += Math.round(12 * lenRatio);
+  // Gecombineerde tekst voor matching (naam + producent samen)
+  const dbFull = dbProducer + ' ' + dbName;
+  const queryFull = (normProducer || '') + ' ' + normName;
+
+  const queryTokens = tokenizeSignificant(queryFull);
+  const dbTokens = tokenizeSignificant(dbFull);
+
+  // --- NAAM SCORE ---
+  const normNameClean = normalizeNoStop(normName);
+  const dbNameClean = normalizeNoStop(w.name);
+
+  if (dbNameClean === normNameClean && normNameClean.length > 2) {
+    score += 30; // Exacte naam match
   } else {
-    // Gedeeltelijke match op losse woorden — alleen woorden > 3 chars tellen
-    const hits = nameParts.filter(p => p.length > 3 && wn.includes(p));
-    // Maar straf af als er woorden in de DB-naam zijn die niet in de zoeknaam zitten
-    const dbWords = wn.split(' ').filter(p => p.length > 3);
-    const missed = dbWords.filter(p => !normName.includes(p)).length;
-    score += hits.length * 3 - missed * 2;
-  }
+    // Hoeveel tokens uit de query zitten in de DB naam?
+    const nameQueryTokens = tokenizeSignificant(normName);
+    const nameDbTokens = tokenizeSignificant(w.name);
 
-  // Alias score
-  for (const alias of aliases) {
-    if (alias === normName || alias.includes(normName) || normName.includes(alias)) { score += 15; break; }
-    if (nameParts.some(p => p.length > 3 && alias.includes(p))) { score += 8; break; }
-  }
+    const hits = nameQueryTokens.filter(t => nameDbTokens.includes(t));
+    const missed = nameDbTokens.filter(t => !nameQueryTokens.includes(t) && !STOP_WORDS.has(t));
 
-  // Producent score — zwaarder gewogen
-  if (normProducer) {
-    if (wp === normProducer) score += 18;
-    else if (wp.includes(normProducer) || normProducer.includes(wp)) score += 12;
-    else {
-      const phits = producerParts.filter(p => p.length > 2 && wp.includes(p));
-      score += phits.length > 0 ? phits.length * 5 : -15; // hogere penalty voor verkeerde producent
+    // Belangrijke specificiteitswoorden — als die in DB staan maar niet in query: penalty
+    const specificWords = ['petit','grand','blanc','rouge','rose','brut','sec','demi','nature',
+      'premier','cru','village','reserve','riserva','classico','superiore','vieilles','vigne',
+      'monopole','combes','forest','vaillons','montee','montee','perrières','perrieres'];
+    const missedSpecific = missed.filter(t => specificWords.includes(t));
+
+    score += hits.length * 4;
+    score -= missed.length * 3;
+    score -= missedSpecific.length * 6; // Extra penalty voor gemiste specifieke woorden
+
+    // Als query veel korter is dan DB naam: lagere score (Palmer vs Alter Ego Palmer)
+    if (nameQueryTokens.length > 0 && nameDbTokens.length > 0) {
+      const ratio = nameQueryTokens.length / nameDbTokens.length;
+      if (ratio < 0.4) score -= 8;
     }
   }
 
-  // Minimum drempel: als de naam totaal niet klopt, geen match
-  if (score < 0) score = 0;
-  return score;
+  // --- PRODUCENT SCORE ---
+  if (normProducer && normProducer.length > 2) {
+    const prodQueryTokens = tokenizeSignificant(normProducer);
+    const prodDbTokens = tokenizeSignificant(w.producer || '');
+
+    if (dbProducer === normalize(normProducer)) {
+      score += 20; // Exacte producent match
+    } else {
+      const prodHits = prodQueryTokens.filter(t => prodDbTokens.includes(t));
+      const prodMissed = prodDbTokens.filter(t => !prodQueryTokens.includes(t));
+      score += prodHits.length * 6;
+      score -= prodMissed.length * 4;
+      if (prodHits.length === 0) score -= 20; // Totaal verkeerde producent
+    }
+  } else {
+    // Geen producent in query: check of producent-naam in de wijnnaam voorkomt
+    const nameQueryTokens = tokenizeSignificant(normName);
+    const prodHitsInName = dbProducerTokens.filter(t => nameQueryTokens.includes(t));
+    score += prodHitsInName.length * 5;
+  }
+
+  // --- ALIAS SCORE ---
+  for (const alias of aliases) {
+    const aliasClean = normalizeNoStop(alias);
+    const nameClean = normalizeNoStop(normName);
+    if (aliasClean === nameClean) { score += 20; break; }
+    if (aliasClean.includes(nameClean) || nameClean.includes(aliasClean)) { score += 12; break; }
+  }
+
+  return Math.max(0, score);
 }
 
 async function matchBatch(wines) {
   const keywords = new Set();
   wines.forEach(w => {
-    normalize(w.name).split(' ').filter(p => p.length > 2).slice(0, 2).forEach(k => keywords.add(k));
-    normalize(w.producer).split(' ').filter(p => p.length > 2).slice(0, 1).forEach(k => keywords.add(k));
+    tokenizeSignificant(w.name).slice(0, 3).forEach(k => keywords.add(k));
+    tokenizeSignificant(w.producer || '').slice(0, 2).forEach(k => keywords.add(k));
   });
 
   const fields = 'id,name,producer,vintage,region,country,colour,market_price_eur,market_price_min,market_price_max,search_aliases';
@@ -125,11 +182,11 @@ async function matchBatch(wines) {
 
   return wines.map(w => {
     const normName = normalize(w.name);
-    const normProducer = normalize(w.producer);
-    const nameParts = normName.split(' ').filter(p => p.length > 2);
-    const producerParts = normProducer.split(' ').filter(p => p.length > 2);
+    const normProducer = normalize(w.producer || '');
+    const nameParts = tokenizeSignificant(w.name);
+    const producerParts = tokenizeSignificant(w.producer || '');
 
-    let best = null, bestScore = 6;
+    let best = null, bestScore = 10; // Hogere drempel — liever geen match dan verkeerde
     for (const c of candidates) {
       const s = scoreMatch(c, normName, normProducer, nameParts, producerParts);
       if (s > bestScore) { bestScore = s; best = c; }
@@ -296,15 +353,21 @@ app.post('/scan', async (req, res) => {
     const CHUNK_SIZE = 8000;
     const prompt = `Je bent een expert in het lezen van restaurantwijnkaarten. Extraheer ALLEEN de wijnen als JSON array.
 
-Regels:
-- Geef ALLEEN een JSON array terug, geen uitleg of markdown
-- Negeer: sectieheaders, beschrijvingen, cocktails, bier, water, aperitief
-- Elk object: name (wijnnaam), producer (producent/wijnhuis), vintage (null als NV/geen jaargang), price (FLESPRIJS als getal)
-- Bij twee prijzen (glas + fles): neem ALTIJD de hoogste = flesprijs
-- Alleen glasprijs zonder flesprijs: sla over
-- Geen duplicaten
-- BELANGRIJK naam vs producent: de producent is het wijnhuis/domaine (bijv. "De Venoge", "Bollinger", "Domaine Leflaive"). De naam is het specifieke product/cuvée (bijv. "Brut Rosé", "Corton-Charlemagne", "Millésimé"). Als een wijn alleen staat als "De Venoge Brut" dan is producer="De Venoge" en name="Brut". Niet andersom.
-- Bij champagne: het wijnhuis is bijna altijd de producent, de cuvée/stijl is de naam
+Geef ALLEEN een JSON array terug, geen uitleg of markdown. Elk object heeft exact deze velden:
+- name: de specifieke cuvée/wijn naam (bijv. "Petit Chablis", "Brut Rosé", "Barolo Riserva", "1er Cru Vaillons")
+- producer: het wijnhuis of de producent (bijv. "Vincent Dauvissat", "Bollinger", "Ceretto")
+- vintage: het jaartal als integer, of null als NV of niet vermeld
+- price: de FLESPRIJS als getal (bij glas+fles prijzen: neem de hoogste)
+
+KRITIEKE REGELS voor naam vs producent:
+1. De PRODUCENT is altijd het wijnhuis/domaine/château (bijv. "Dauvissat", "De Venoge", "Bollinger", "Leflaive")
+2. De NAAM is altijd de specifieke cuvée of appellation (bijv. "Petit Chablis", "Chablis 1er Cru Vaillons", "Brut Rosé")
+3. Bij "Vincent Dauvissat Petit Chablis": producer="Vincent Dauvissat", name="Petit Chablis"
+4. Bij "De Venoge Brut Rosé": producer="De Venoge", name="Brut Rosé"
+5. Bij "Château Palmer 2016": producer="Château Palmer", name="Château Palmer" (of de bekende wijnnaam)
+6. "Petit Chablis" en "Chablis 1er Cru" zijn HEEL verschillende wijnen — zorg dat de naam precies klopt
+7. Negeer: sectieheaders, beschrijvingen, cocktails, bier, water, gerechtaanbevelingen
+8. Geen duplicaten. Alleen glasprijs zonder flesprijs: sla over.
 
 Wijnkaart van ${restaurant || 'restaurant'}:
 `;
