@@ -263,7 +263,8 @@ document.addEventListener('click', e => {
 
 async function fetchSuggestions(q) {
   try {
-    const url = SB + '/scan_results?or=(wine_name.ilike.*' + encodeURIComponent(q) + '*,producer.ilike.*' + encodeURIComponent(q) + '*)&select=wine_name,producer,vintage&limit=30';
+    // Zoek in scan_results — filter lege namen en te korte resultaten
+    const url = SB + '/scan_results?or=(wine_name.ilike.*' + encodeURIComponent(q) + '*,producer.ilike.*' + encodeURIComponent(q) + '*)&select=wine_name,producer,vintage&wine_name=not.is.null&limit=50';
     const r = await fetch(url, { headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY } });
     const data = await r.json();
     if (!Array.isArray(data)) return;
@@ -272,7 +273,7 @@ async function fetchSuggestions(q) {
     const unique = [];
     for (const w of data) {
       const k = (w.wine_name || '').toLowerCase() + '|' + (w.producer || '').toLowerCase();
-      if (!seen.has(k) && w.wine_name) {
+      if (!seen.has(k) && w.wine_name && w.wine_name.length > 3) {
         seen.add(k);
         unique.push(w);
       }
@@ -306,7 +307,8 @@ async function search() {
   resultsEl.innerHTML = '<div class="empty"><div class="spinner"></div><p>' + t('searching') + '</p></div>';
   
   try {
-    const url = SB + '/scan_results?or=(wine_name.ilike.*' + encodeURIComponent(q) + '*,producer.ilike.*' + encodeURIComponent(q) + '*)&select=wine_name,producer,vintage,restaurant_price,market_price,steal_score,scanned_at,colour,restaurants(id,name,city,last_scanned_at)&order=steal_score.desc&limit=100';
+    // Zoek in scan_results — filter lege namen, sorteer op steal_score
+    const url = SB + '/scan_results?or=(wine_name.ilike.*' + encodeURIComponent(q) + '*,producer.ilike.*' + encodeURIComponent(q) + '*)&select=wine_name,producer,vintage,restaurant_price,market_price,steal_score,scanned_at,colour,restaurants(id,name,city,last_scanned_at)&order=steal_score.desc&wine_name=not.is.null&limit=200';
     const r = await fetch(url, { headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY } });
     const data = await r.json();
     
@@ -325,7 +327,7 @@ async function search() {
       const k = (s.wine_name || '').toLowerCase().trim() + '|' + (s.producer || '').toLowerCase().trim() + '|' + (s.vintage || '');
       if (!grouped[k]) grouped[k] = { wine_name: s.wine_name, producer: s.producer, vintage: s.vintage, market_price: s.market_price, colour: s.colour, restaurants: [] };
       const existing = grouped[k].restaurants.find(x => x.id === s.restaurants?.id);
-      if (!existing && s.restaurants) {
+      if (!existing && s.restaurants && s.restaurant_price && s.restaurant_price > 0) {
         grouped[k].restaurants.push({
           id: s.restaurants.id,
           name: s.restaurants.name,
