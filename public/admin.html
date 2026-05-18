@@ -286,7 +286,7 @@ function applyFilters(){
     return String(av).localeCompare(String(bv))*sortDir;
   });
 
-  document.getElementById('f-count').textContent=filtered.length+' wijnen';
+  document.getElementById('f-count').textContent=filtered.length+' van '+allPriced.length;
   renderPriced(filtered);
 }
 
@@ -336,7 +336,7 @@ function renderPriced(wines){
         <td><button class="expand-btn" onclick="toggleExp('${w.id}',this)">${exp?'▼':'▶'}</button></td>
         <td><input id="e-name-${w.id}" value="${esc(w.name)}"></td>
         <td><input id="e-producer-${w.id}" value="${esc(w.producer||'')}"></td>
-        <td><input id="e-vintage-${w.id}" type="number" value="${w.vintage||''}"></td>
+        <td><input id="e-vintage-${w.id}" type="text" placeholder="NV" style="width:70px" value="${w.vintage||''}"></td>
         <td><select id="e-colour-${w.id}">
           ${['red','white','sparkling','rosé','fortified'].map(c=>`<option value="${c}"${w.colour===c?' selected':''}>${c}</option>`).join('')}
         </select></td>
@@ -377,7 +377,7 @@ async function saveEdit(id){
   const w={
     name:document.getElementById('e-name-'+id)?.value.trim(),
     producer:document.getElementById('e-producer-'+id)?.value.trim()||null,
-    vintage:parseInt(document.getElementById('e-vintage-'+id)?.value)||null,
+    vintage:(()=>{const v=document.getElementById('e-vintage-'+id)?.value?.trim();if(!v||v.toLowerCase()==='nv')return null;const yr=parseInt(v);return(yr>=1900&&yr<=2030)?yr:null;})(),
     colour:document.getElementById('e-colour-'+id)?.value,
     region:document.getElementById('e-region-'+id)?.value.trim()||null,
     country:document.getElementById('e-country-'+id)?.value.trim()||null,
