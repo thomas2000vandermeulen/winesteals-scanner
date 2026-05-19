@@ -1,3 +1,4 @@
+// WineSteals server v2 - chunked scanning
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
