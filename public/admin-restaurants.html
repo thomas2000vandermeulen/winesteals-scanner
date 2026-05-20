@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--wine:#7B1C2E;--wine-dark:#4A0F1C;--gold:#C9A84C;--cream:#F8F4EE;--ink:#1A1208;--muted:#6B5E52;--border:rgba(123,28,46,0.15);--green:#2E7D32;--red:#C62828}
+:root{--wine:#7B1C2E;--wine-dark:#4A0F1C;--gold:#C9A84C;--cream:#F8F4EE;--ink:#1A1208;--muted:#6B5E52;--border:rgba(123,28,46,0.15);--green:#2E7D32;--red:#C62828;--blue:#1565C0;--orange:#E65100}
 body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
 .admin-nav{background:var(--wine-dark);display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;position:sticky;top:0;z-index:100}
 .nav-brand{color:white;font-family:'Playfair Display',serif;font-size:17px;text-decoration:none;font-weight:700}
@@ -22,78 +22,108 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .login-box p{color:var(--muted);font-size:14px;margin-bottom:24px}
 .login-box input{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;margin-bottom:16px;background:white}
 .login-box button{width:100%;padding:12px;background:var(--wine);color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer}
-.container{max-width:1200px;margin:0 auto;padding:28px 32px}
-.page-header{margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.container{max-width:1300px;margin:0 auto;padding:28px 32px}
+.page-header{margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .page-header h1{font-family:'Playfair Display',serif;font-size:24px;color:var(--wine-dark)}
-.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:opacity .15s}
+.btn:disabled{opacity:.45;cursor:default}
 .btn-secondary{background:white;color:var(--wine);border:1.5px solid var(--wine)}
 .btn-primary{background:var(--wine);color:white}
 .btn-danger{background:var(--red);color:white}
+.btn-success{background:var(--green);color:white}
+.btn-blue{background:var(--blue);color:white}
+.btn-orange{background:var(--orange);color:white}
 .btn-sm{padding:5px 10px;font-size:12px}
-.toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
-.toolbar input{padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;background:white;flex:1;min-width:200px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
-.rest-card{background:white;border-radius:10px;border:1px solid var(--border);padding:20px}
-.rest-card h3{font-size:15px;font-weight:600;margin-bottom:4px}
-.rest-card .city{font-size:13px;color:var(--muted);margin-bottom:12px}
-.rest-card .meta{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px;margin-bottom:14px}
-.rest-card .actions{display:flex;gap:8px;flex-wrap:wrap}
-.rest-card .steal-count{display:inline-block;padding:3px 9px;background:rgba(123,28,46,.08);color:var(--wine);border-radius:12px;font-size:12px;font-weight:500}
-.add-panel{background:white;border-radius:10px;border:1px solid var(--border);padding:20px;margin-bottom:20px}
+.add-panel{background:white;border-radius:10px;border:1px solid var(--border);padding:18px 20px;margin-bottom:18px}
 .add-panel h3{font-size:14px;font-weight:600;margin-bottom:14px;color:var(--wine-dark)}
 .add-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
-.fg{flex:1;min-width:140px}
+.fg{flex:1;min-width:130px}
 .fg label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);display:block;margin-bottom:4px}
-.fg input{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px}
+.fg input{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;background:white}
+.fg input:focus{outline:none;border-color:var(--wine)}
+.toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.toolbar input{padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;background:white;flex:1;min-width:200px}
+.toolbar input:focus{outline:none;border-color:var(--wine)}
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:13px;background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+th{text-align:left;padding:10px 12px;background:var(--wine-dark);color:white;font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{background:#5a1020}
+th.nosort{cursor:default}
+th.nosort:hover{background:var(--wine-dark)}
+th .sa{margin-left:4px;opacity:.5;font-size:10px}
+th.sorted .sa{opacity:1}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(123,28,46,.025)}
+tr.editing td{background:rgba(201,168,76,.07)}
+/* inline edit inputs */
+td input[type=text],td input[type=number]{padding:5px 8px;border:1.5px solid var(--wine);border-radius:6px;font-size:13px;background:white;width:100%}
+.loc-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.loc-ok{background:#E8F5E9;color:var(--green)}
+.loc-missing{background:#FFF3E0;color:var(--orange)}
+.steal-badge{display:inline-block;padding:2px 8px;background:rgba(123,28,46,.08);color:var(--wine);border-radius:10px;font-size:12px;font-weight:500}
 .empty{text-align:center;padding:60px;color:var(--muted)}
-.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-size:14px;color:white;z-index:9999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-size:14px;color:white;z-index:9999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;max-width:320px}
 .toast.show{opacity:1;transform:translateY(0)}
 .toast.success{background:var(--green)}
 .toast.error{background:var(--red)}
+.count-badge{font-size:12px;color:var(--muted);margin-left:8px}
 </style>
 </head>
 <body>
 
 <div class="login-overlay" id="login-overlay">
-  <div class="login-box">
-    <h2>WineSteals</h2>
-    <p>Admin toegang vereist</p>
-    <input type="password" id="pw-input" placeholder="Wachtwoord" onkeydown="if(event.key==='Enter')checkPw()"/>
-    <button onclick="checkPw()">Inloggen</button>
-  </div>
+<div class="login-box">
+<h2>WineSteals</h2>
+<p>Admin toegang vereist</p>
+<input type="password" id="pw-input" placeholder="Wachtwoord" onkeydown="if(event.key==='Enter')checkPw()"/>
+<button onclick="checkPw()">Inloggen</button>
+</div>
 </div>
 
 <nav class="admin-nav">
-  <a class="nav-brand" href="/admin.html">🍷 WineSteals Admin</a>
-  <div class="nav-links">
-    <a href="/admin.html" class="nav-link">Wijnen</a>
-    <a href="/admin-prices.html" class="nav-link">Price Finder</a>
-    <a href="/admin-scans.html" class="nav-link">Scans</a>
-    <a href="/admin-restaurants.html" class="nav-link active">Restaurants</a>
-  </div>
+<a class="nav-brand" href="/admin.html">🍷 WineSteals Admin</a>
+<div class="nav-links">
+<a href="/admin.html" class="nav-link">Wijnen</a>
+<a href="/admin-prices.html" class="nav-link">Price Finder</a>
+<a href="/admin-scans.html" class="nav-link">Scans</a>
+<a href="/admin-restaurants.html" class="nav-link active">Restaurants</a>
+</div>
 </nav>
 
 <div class="container">
-  <div class="page-header">
-    <h1>Restaurants</h1>
-    <button class="btn btn-secondary" onclick="load()">↻ Vernieuwen</button>
-  </div>
+<div class="page-header">
+<h1>Restaurants <span class="count-badge" id="count-label"></span></h1>
+<button class="btn btn-secondary" onclick="load()">↻ Vernieuwen</button>
+</div>
 
-  <div class="add-panel">
-    <h3>Restaurant toevoegen</h3>
-    <div class="add-row">
-      <div class="fg"><label>Naam *</label><input id="r-name" type="text" placeholder="bijv. De Badcuyp"></div>
-      <div class="fg"><label>Stad</label><input id="r-city" type="text" placeholder="Amsterdam"></div>
-      <div class="fg"><label>Adres</label><input id="r-addr" type="text" placeholder="Swammerdamstraat 10"></div>
-      <button class="btn btn-primary" onclick="addRestaurant()">+ Toevoegen</button>
-    </div>
-  </div>
+<!-- Toevoegen -->
+<div class="add-panel">
+<h3>Restaurant toevoegen</h3>
+<div class="add-row">
+<div class="fg"><label>Naam *</label><input id="r-name" type="text" placeholder="bijv. De Badcuyp"></div>
+<div class="fg"><label>Stad</label><input id="r-city" type="text" placeholder="Amsterdam"></div>
+<div class="fg"><label>Adres</label><input id="r-addr" type="text" placeholder="Swammerdamstraat 10"></div>
+<div class="fg" style="max-width:100px"><label>Lat</label><input id="r-lat" type="number" step="0.0001" placeholder="52.3676"></div>
+<div class="fg" style="max-width:100px"><label>Lng</label><input id="r-lng" type="number" step="0.0001" placeholder="4.9041"></div>
+<button class="btn btn-secondary btn-sm" onclick="geocodeNew()" style="align-self:flex-end;margin-bottom:1px">📍 Auto</button>
+<button class="btn btn-primary" onclick="addRestaurant()" style="align-self:flex-end;margin-bottom:1px">+ Toevoegen</button>
+</div>
+</div>
 
-  <div class="toolbar">
-    <input id="q" type="text" placeholder="Zoek restaurant..." oninput="filter()"/>
-  </div>
+<!-- Zoek -->
+<div class="toolbar">
+<input id="q" type="text" placeholder="Zoek op naam of stad..." oninput="applyFilter()"/>
+<select id="f-loc" onchange="applyFilter()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;background:white">
+<option value="">Alle locaties</option>
+<option value="ok">Met locatie</option>
+<option value="missing">Zonder locatie</option>
+</select>
+<span id="filter-count" style="font-size:12px;color:var(--muted)"></span>
+</div>
 
-  <div class="grid" id="grid"><div class="empty"><p>Laden...</p></div></div>
+<!-- Tabel -->
+<div id="table-wrap"><div class="empty"><p>Laden...</p></div></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -101,96 +131,272 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 <script>
 const PW='winesteals2026';
 const SB='https://kdhczlabjecqxlyuxprl.supabase.co/rest/v1';
-const SBKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
 
-function checkPw(){
-  if(document.getElementById('pw-input').value===PW){localStorage.setItem('ws_aa',btoa(PW));document.getElementById('login-overlay').classList.add('hidden');load();}
-  else document.getElementById('pw-input').style.borderColor='red';
-}
-if(localStorage.getItem('ws_aa')===btoa(PW)){document.getElementById('login-overlay').classList.add('hidden');load();}
+let allRests = [], editingId = null, sortCol = 'last_scanned_at', sortDir = -1;
 
-let allRests=[];
-
-async function load(){
-  const r=await fetch(SB+'/restaurants?order=last_scanned_at.desc&limit=500&select=id,name,city,address,lat,lng,last_scanned_at',{
-    headers:{'apikey':SBKEY,'Authorization':'Bearer '+SBKEY}
-  });
-  allRests=await r.json();
-  if(!Array.isArray(allRests))allRests=[];
-  // Haal steal counts op
-  const r2=await fetch(SB+'/scan_results?select=restaurant_id&is_steal=eq.true',{headers:{'apikey':SBKEY,'Authorization':'Bearer '+SBKEY}});
-  const steals=await r2.json();
-  const counts={};
-  if(Array.isArray(steals))steals.forEach(s=>{counts[s.restaurant_id]=(counts[s.restaurant_id]||0)+1;});
-  allRests.forEach(r=>r._steals=counts[r.id]||0);
-  filter();
-}
-
-function filter(){
-  const q=(document.getElementById('q')?.value||'').toLowerCase();
-  render(allRests.filter(r=>!q||(r.name||'').toLowerCase().includes(q)||(r.city||'').toLowerCase().includes(q)));
-}
-
-function render(rests){
-  const el=document.getElementById('grid');
-  if(!rests.length){el.innerHTML='<div class="empty"><p>Geen restaurants</p></div>';return;}
-  el.innerHTML=rests.map(r=>{
-    const lastScan=r.last_scanned_at?new Date(r.last_scanned_at).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'2-digit'}):'Nooit';
-    const hasCoords=r.lat&&r.lng;
-    return`<div class="rest-card">
-      <h3>${esc(r.name)}</h3>
-      <div class="city">${esc(r.city||'')}${r.address?' · '+esc(r.address):''}</div>
-      <div class="meta">
-        <span>📅 Laatste scan: ${lastScan}</span>
-        ${hasCoords?`<span>📍 ${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</span>`:'<span style="color:#FF9800">📍 Geen locatie — kaart niet mogelijk</span>'}
-      </div>
-      ${r._steals?`<div class="steal-count">🍷 ${r._steals} steals gevonden</div>`:''}
-      <div class="actions" style="margin-top:12px">
-        ${!hasCoords?`<button class="btn btn-secondary btn-sm" onclick="addCoords('${r.id}','${esc(r.name)}','${esc(r.city||'Amsterdam')}')">📍 Locatie toevoegen</button>`:''}
-        <button class="btn btn-danger btn-sm" onclick="delRest('${r.id}',this)">🗑</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function addRestaurant(){
-  const name=document.getElementById('r-name').value.trim();
-  if(!name){toast('Naam verplicht','error');return;}
-  const r=await fetch(SB+'/restaurants',{method:'POST',headers:{'apikey':SBKEY,'Authorization':'Bearer '+SBKEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-    body:JSON.stringify({name,city:document.getElementById('r-city').value.trim()||'Amsterdam',address:document.getElementById('r-addr').value.trim()||null})});
-  if(!r.ok){toast('Fout: '+r.status,'error');return;}
-  toast('Restaurant toegevoegd ✓');
-  document.getElementById('r-name').value='';
-  document.getElementById('r-city').value='';
-  document.getElementById('r-addr').value='';
-  load();
-}
-
-async function addCoords(id,name,city){
-  const query=encodeURIComponent(name+' '+city+' restaurant');
-  const apiUrl=`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`;
-  try{
-    const r=await fetch(apiUrl,{headers:{'User-Agent':'WineSteals/1.0'}});
-    const d=await r.json();
-    if(!d.length){toast('Geen locatie gevonden voor "'+name+'"','error');return;}
-    const lat=parseFloat(d[0].lat),lng=parseFloat(d[0].lon);
-    await fetch(SB+'/restaurants?id=eq.'+id,{method:'PATCH',headers:{'apikey':SBKEY,'Authorization':'Bearer '+SBKEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({lat,lng})});
-    toast('Locatie toegevoegd: '+lat.toFixed(4)+', '+lng.toFixed(4));
+function checkPw() {
+  if (document.getElementById('pw-input').value === PW) {
+    localStorage.setItem('ws_aa', btoa(PW));
+    document.getElementById('login-overlay').classList.add('hidden');
     load();
-  }catch(e){toast('Fout: '+e.message,'error');}
+  } else document.getElementById('pw-input').style.borderColor = 'red';
 }
-
-async function delRest(id,btn){
-  if(!confirm('Restaurant en alle scan resultaten verwijderen?'))return;
-  btn.textContent='...';
-  await fetch(SB+'/restaurants?id=eq.'+id,{method:'DELETE',headers:{'apikey':SBKEY,'Authorization':'Bearer '+SBKEY}});
-  toast('Verwijderd');
+if (localStorage.getItem('ws_aa') === btoa(PW)) {
+  document.getElementById('login-overlay').classList.add('hidden');
   load();
 }
 
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function toast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'success')+' show';setTimeout(()=>t.classList.remove('show'),3000);}
+async function sbGet(path) {
+  const r = await fetch(SB + path, { headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY } });
+  if (!r.ok) throw new Error('GET ' + r.status);
+  return r.json();
+}
+async function sbPatch(path, body) {
+  const r = await fetch(SB + path, {
+    method: 'PATCH',
+    headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error('PATCH ' + r.status + ': ' + await r.text().catch(() => ''));
+}
+async function sbPost(path, body) {
+  const r = await fetch(SB + path, {
+    method: 'POST',
+    headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error('POST ' + r.status);
+}
+async function sbDelete(path) {
+  const r = await fetch(SB + path, {
+    method: 'DELETE',
+    headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY }
+  });
+  if (!r.ok) throw new Error('DELETE ' + r.status);
+}
+
+async function load() {
+  document.getElementById('table-wrap').innerHTML = '<div class="empty"><p>Laden...</p></div>';
+  try {
+    const [rests, steals] = await Promise.all([
+      sbGet('/restaurants?order=last_scanned_at.desc&limit=500&select=id,name,city,address,lat,lng,last_scanned_at'),
+      sbGet('/scan_results?select=restaurant_id&is_steal=eq.true')
+    ]);
+    allRests = Array.isArray(rests) ? rests : [];
+    const counts = {};
+    if (Array.isArray(steals)) steals.forEach(s => { counts[s.restaurant_id] = (counts[s.restaurant_id] || 0) + 1; });
+    allRests.forEach(r => r._steals = counts[r.id] || 0);
+    document.getElementById('count-label').textContent = '(' + allRests.length + ')';
+    applyFilter();
+  } catch (e) { toast('Laadlout: ' + e.message, 'error'); }
+}
+
+function applyFilter() {
+  const q = (document.getElementById('q')?.value || '').toLowerCase();
+  const fl = document.getElementById('f-loc')?.value || '';
+  let filtered = allRests.filter(r => {
+    if (q && ![(r.name||''), (r.city||''), (r.address||'')].join(' ').toLowerCase().includes(q)) return false;
+    if (fl === 'ok' && !(r.lat && r.lng)) return false;
+    if (fl === 'missing' && (r.lat && r.lng)) return false;
+    return true;
+  });
+  filtered.sort((a, b) => {
+    let av = a[sortCol] ?? '', bv = b[sortCol] ?? '';
+    if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * sortDir;
+    return String(av).localeCompare(String(bv)) * sortDir;
+  });
+  document.getElementById('filter-count').textContent = filtered.length + ' van ' + allRests.length;
+  renderTable(filtered);
+}
+
+function setSort(col) {
+  if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = 1; }
+  applyFilter();
+  document.querySelectorAll('th[data-col]').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.col === col);
+    const a = th.querySelector('.sa');
+    if (a) a.textContent = th.dataset.col === col ? (sortDir === 1 ? '↑' : '↓') : '↕';
+  });
+}
+
+function renderTable(rests) {
+  const wrap = document.getElementById('table-wrap');
+  if (!rests.length) { wrap.innerHTML = '<div class="empty"><p>Geen restaurants gevonden</p></div>'; return; }
+
+  let h = `<table><thead><tr>
+    <th data-col="name" onclick="setSort('name')">Naam<span class="sa">${sortCol==='name'?(sortDir===1?'↑':'↓'):'↕'}</span></th>
+    <th data-col="city" onclick="setSort('city')">Stad<span class="sa">${sortCol==='city'?(sortDir===1?'↑':'↓'):'↕'}</span></th>
+    <th data-col="address" onclick="setSort('address')">Adres<span class="sa">↕</span></th>
+    <th class="nosort">Locatie</th>
+    <th data-col="_steals" onclick="setSort('_steals')">Steals<span class="sa">${sortCol==='_steals'?(sortDir===1?'↑':'↓'):'↕'}</span></th>
+    <th data-col="last_scanned_at" onclick="setSort('last_scanned_at')">Laatste scan<span class="sa">${sortCol==='last_scanned_at'?(sortDir===1?'↑':'↓'):'↓'}</span></th>
+    <th class="nosort" style="width:220px">Acties</th>
+  </tr></thead><tbody>`;
+
+  for (const r of rests) {
+    const lastScan = r.last_scanned_at
+      ? new Date(r.last_scanned_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: '2-digit' })
+      : 'Nooit';
+    const hasCoords = r.lat && r.lng;
+    const coordStr = hasCoords ? `${parseFloat(r.lat).toFixed(4)}, ${parseFloat(r.lng).toFixed(4)}` : '';
+
+    if (editingId === r.id) {
+      h += `<tr class="editing" id="row-${r.id}">
+        <td><input type="text" id="e-name-${r.id}" value="${esc(r.name)}" style="min-width:150px"></td>
+        <td><input type="text" id="e-city-${r.id}" value="${esc(r.city||'')}" style="width:110px"></td>
+        <td><input type="text" id="e-addr-${r.id}" value="${esc(r.address||'')}" style="min-width:160px"></td>
+        <td>
+          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+            <input type="number" id="e-lat-${r.id}" value="${r.lat||''}" placeholder="lat" step="0.0001" style="width:90px">
+            <input type="number" id="e-lng-${r.id}" value="${r.lng||''}" placeholder="lng" step="0.0001" style="width:90px">
+            <button class="btn btn-orange btn-sm" onclick="geocodeRow('${r.id}')" title="Auto-locatie opzoeken">📍</button>
+          </div>
+        </td>
+        <td>${r._steals ? `<span class="steal-badge">🍷 ${r._steals}</span>` : '—'}</td>
+        <td style="font-size:12px;color:var(--muted)">${lastScan}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-success btn-sm" onclick="saveEdit('${r.id}')">✓ Opslaan</button>
+          <button class="btn btn-secondary btn-sm" onclick="cancelEdit()">✕</button>
+        </td>
+      </tr>`;
+    } else {
+      h += `<tr id="row-${r.id}">
+        <td><strong>${esc(r.name)}</strong></td>
+        <td style="color:var(--muted)">${esc(r.city||'')}</td>
+        <td style="font-size:12px;color:var(--muted)">${esc(r.address||'—')}</td>
+        <td>
+          ${hasCoords
+            ? `<span class="loc-badge loc-ok">📍 ${coordStr}</span>`
+            : `<span class="loc-badge loc-missing">⚠ Geen locatie</span>`}
+        </td>
+        <td>${r._steals ? `<span class="steal-badge">🍷 ${r._steals}</span>` : '<span style="color:var(--muted);font-size:12px">—</span>'}</td>
+        <td style="font-size:12px;color:var(--muted)">${lastScan}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-blue btn-sm" onclick="startEdit('${r.id}')">✏️ Bewerken</button>
+          ${!hasCoords ? `<button class="btn btn-orange btn-sm" onclick="autoGeocode('${r.id}','${esc(r.name)}','${esc(r.city||'')}')" title="Locatie automatisch ophalen">📍</button>` : ''}
+          <button class="btn btn-danger btn-sm" onclick="delRest('${r.id}',this)">🗑</button>
+        </td>
+      </tr>`;
+    }
+  }
+  h += '</tbody></table>';
+  wrap.innerHTML = h;
+}
+
+function startEdit(id) { editingId = id; applyFilter(); }
+function cancelEdit() { editingId = null; applyFilter(); }
+
+async function saveEdit(id) {
+  const name = document.getElementById('e-name-' + id)?.value.trim();
+  if (!name) return toast('Naam mag niet leeg zijn', 'error');
+  const lat = parseFloat(document.getElementById('e-lat-' + id)?.value) || null;
+  const lng = parseFloat(document.getElementById('e-lng-' + id)?.value) || null;
+  const patch = {
+    name,
+    city: document.getElementById('e-city-' + id)?.value.trim() || null,
+    address: document.getElementById('e-addr-' + id)?.value.trim() || null,
+    lat: lat,
+    lng: lng
+  };
+  try {
+    await sbPatch('/restaurants?id=eq.' + id, patch);
+    const idx = allRests.findIndex(r => r.id === id);
+    if (idx >= 0) allRests[idx] = { ...allRests[idx], ...patch };
+    editingId = null;
+    toast('Opgeslagen ✓');
+    applyFilter();
+  } catch (e) { toast('Fout: ' + e.message, 'error'); }
+}
+
+// Auto-geocode vanuit bewerken-modus (de 📍 knop naast de inputs)
+async function geocodeRow(id) {
+  const name = document.getElementById('e-name-' + id)?.value.trim() || '';
+  const city = document.getElementById('e-city-' + id)?.value.trim() || '';
+  const addr = document.getElementById('e-addr-' + id)?.value.trim() || '';
+  const query = [name, addr, city].filter(Boolean).join(' ');
+  if (!query) return toast('Vul eerst naam of adres in', 'error');
+  toast('Locatie opzoeken...', 'success');
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query + ' restaurant') + '&format=json&limit=1', { headers: { 'User-Agent': 'WineSteals/1.0' } });
+    const d = await r.json();
+    if (!d.length) { toast('Geen locatie gevonden', 'error'); return; }
+    document.getElementById('e-lat-' + id).value = parseFloat(d[0].lat).toFixed(6);
+    document.getElementById('e-lng-' + id).value = parseFloat(d[0].lon).toFixed(6);
+    toast('Gevonden: ' + d[0].display_name.slice(0, 50) + '…');
+  } catch (e) { toast('Geocode fout: ' + e.message, 'error'); }
+}
+
+// Auto-geocode direct opslaan (de 📍 knop in de niet-bewerken-rij)
+async function autoGeocode(id, name, city) {
+  const query = [name, city].filter(Boolean).join(' ');
+  toast('Locatie opzoeken...', 'success');
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query + ' restaurant') + '&format=json&limit=1', { headers: { 'User-Agent': 'WineSteals/1.0' } });
+    const d = await r.json();
+    if (!d.length) { toast('Geen locatie gevonden voor "' + name + '"', 'error'); return; }
+    const lat = parseFloat(d[0].lat), lng = parseFloat(d[0].lon);
+    await sbPatch('/restaurants?id=eq.' + id, { lat, lng });
+    const idx = allRests.findIndex(r => r.id === id);
+    if (idx >= 0) { allRests[idx].lat = lat; allRests[idx].lng = lng; }
+    toast('Locatie opgeslagen: ' + lat.toFixed(4) + ', ' + lng.toFixed(4));
+    applyFilter();
+  } catch (e) { toast('Fout: ' + e.message, 'error'); }
+}
+
+// Auto-geocode voor het "toevoegen" formulier
+async function geocodeNew() {
+  const name = document.getElementById('r-name').value.trim();
+  const city = document.getElementById('r-city').value.trim();
+  const addr = document.getElementById('r-addr').value.trim();
+  const query = [name, addr, city].filter(Boolean).join(' ');
+  if (!query) return toast('Vul eerst naam of adres in', 'error');
+  toast('Locatie opzoeken...', 'success');
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query + ' restaurant') + '&format=json&limit=1', { headers: { 'User-Agent': 'WineSteals/1.0' } });
+    const d = await r.json();
+    if (!d.length) { toast('Geen locatie gevonden', 'error'); return; }
+    document.getElementById('r-lat').value = parseFloat(d[0].lat).toFixed(6);
+    document.getElementById('r-lng').value = parseFloat(d[0].lon).toFixed(6);
+    toast('Gevonden: ' + d[0].display_name.slice(0, 60) + '…');
+  } catch (e) { toast('Geocode fout: ' + e.message, 'error'); }
+}
+
+async function addRestaurant() {
+  const name = document.getElementById('r-name').value.trim();
+  if (!name) { toast('Naam verplicht', 'error'); return; }
+  const lat = parseFloat(document.getElementById('r-lat').value) || null;
+  const lng = parseFloat(document.getElementById('r-lng').value) || null;
+  try {
+    await sbPost('/restaurants', {
+      name,
+      city: document.getElementById('r-city').value.trim() || 'Amsterdam',
+      address: document.getElementById('r-addr').value.trim() || null,
+      lat, lng
+    });
+    toast('Restaurant toegevoegd ✓');
+    ['r-name','r-city','r-addr','r-lat','r-lng'].forEach(id => document.getElementById(id).value = '');
+    load();
+  } catch (e) { toast('Fout: ' + e.message, 'error'); }
+}
+
+async function delRest(id, btn) {
+  if (!confirm('Restaurant verwijderen? Alle bijbehorende scanresultaten worden ook verwijderd.')) return;
+  btn.textContent = '...'; btn.disabled = true;
+  try {
+    await sbDelete('/restaurants?id=eq.' + id);
+    allRests = allRests.filter(r => r.id !== id);
+    toast('Verwijderd ✓');
+    applyFilter();
+  } catch (e) { toast('Fout: ' + e.message, 'error'); btn.textContent = '🗑'; btn.disabled = false; }
+}
+
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + (type || 'success') + ' show';
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
 </script>
 </body>
 </html>
