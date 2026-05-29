@@ -650,10 +650,20 @@ function updateBulkBar(){
 async function bulkDelete(){
   const n=selectedPending.size;
   if(!n)return;
-  if(!confirm(`${n} pending wijnen verwijderen? Dit kan niet ongedaan worden.`))return;
+  if(!confirm(`${n} pending wijnen verwijderen? Ze worden ook uit scan results verwijderd en komen niet terug.`))return;
   let done=0;
   for(const id of selectedPending){
-    try{await api('/wines?id=eq.'+id,'DELETE');done++;}catch(e){console.warn('del error',e.message);}
+    try{
+      const w=allPending.find(x=>x.id===id);
+      if(w){
+        const nm=encodeURIComponent(w.name);
+        await fetch(SB+'/scan_results?wine_name=ilike.'+nm,{
+          method:'DELETE',headers:H({'Prefer':'return=minimal'})
+        }).catch(()=>{});
+      }
+      await api('/wines?id=eq.'+id,'DELETE');
+      done++;
+    }catch(e){console.warn('del error',e.message);}
   }
   toast(`${done} verwijderd ✓`);
   selectedPending.clear();
@@ -688,12 +698,23 @@ async function approvePending(id){
 
 // Verwijderen
 async function delPending(id,btn){
-  if(!confirm('Wijn verwijderen?'))return;
+  if(!confirm('Wijn verwijderen? Hij wordt ook uit scan results verwijderd en komt niet terug bij nieuwe scans.'))return;
   btn.textContent='...';btn.disabled=true;
   try{
+    // Verwijder ook bijbehorende scan_results (op wine_name)
+    const w=allPending.find(x=>x.id===id);
+    if(w){
+      const nm=encodeURIComponent(w.name);
+      // Verwijder scan results met deze naam
+      await fetch(SB+'/scan_results?wine_name=ilike.'+nm,{
+        method:'DELETE',
+        headers:H({'Prefer':'return=minimal'})
+      }).catch(()=>{});
+    }
+    // Verwijder de wine record zelf
     await api('/wines?id=eq.'+id,'DELETE');
     allPending=allPending.filter(w=>w.id!==id);
-    toast('Verwijderd ✓');
+    toast('Verwijderd ✓ (ook uit scan results)');
     applyPendingFilters();loadStats();
   }catch(e){toast('Fout: '+e.message,'error');btn.textContent='🗑';btn.disabled=false;}
 }
