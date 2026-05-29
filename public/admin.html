@@ -210,6 +210,7 @@ td input[type=number],td input[type=text],td select{padding:4px 6px;border:1.5px
 
 <script>
 const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
+const ADMIN_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjAwMjUzMSwiZXhwIjoyMDkxNTc4NTMxfQ.8Ok37JAr6c4IDb4RZuOKY2nddje7e-nLdQYa7jLUJhs';
 const PW='winesteals2026';
 const SB='https://kdhczlabjecqxlyuxprl.supabase.co/rest/v1';
 
@@ -226,12 +227,14 @@ function checkPw(){
   } else document.getElementById('pw-input').style.borderColor='red';
 }
 
-const H=x=>({'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json',...x});
+const H=(x,useAdmin)=>{const k=useAdmin?ADMIN_KEY:KEY;return {'apikey':k,'Authorization':'Bearer '+k,'Content-Type':'application/json',...x};};
+const HD=x=>H(x,true);
 
 async function api(path,method,body){
+  const isWrite=method&&method!=='GET';
   const r=await fetch(SB+path,{
     method:method||'GET',
-    headers:H(method==='GET'||!method?{'Prefer':'count=exact','Range-Unit':'items','Range':'0-9999'}:{'Prefer':'return=minimal'}),
+    headers:H(method==='GET'||!method?{'Prefer':'count=exact','Range-Unit':'items','Range':'0-9999'}:{'Prefer':'return=minimal'},isWrite),
     body:body?JSON.stringify(body):null
   });
   if(r.status!==200&&r.status!==201&&r.status!==204&&r.status!==206){
@@ -658,7 +661,7 @@ async function bulkDelete(){
       if(w){
         const nm=encodeURIComponent(w.name);
         await fetch(SB+'/scan_results?wine_name=ilike.'+nm,{
-          method:'DELETE',headers:H({'Prefer':'return=minimal'})
+          method:'DELETE',headers:HD({'Prefer':'return=minimal'})
         }).catch(()=>{});
       }
       await api('/wines?id=eq.'+id,'DELETE');
@@ -708,7 +711,7 @@ async function delPending(id,btn){
       // Verwijder scan results met deze naam
       await fetch(SB+'/scan_results?wine_name=ilike.'+nm,{
         method:'DELETE',
-        headers:H({'Prefer':'return=minimal'})
+        headers:HD({'Prefer':'return=minimal'})
       }).catch(()=>{});
     }
     // Verwijder de wine record zelf
