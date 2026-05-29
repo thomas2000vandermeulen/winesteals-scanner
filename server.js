@@ -315,8 +315,13 @@ async function saveUnmatchedAsPending(wines) {
     for (const w of unmatched) {
       try {
         const nm = encodeURIComponent(w.name.trim());
-        const existing = await sbGet(`wines?name=ilike.${nm}&vintage=eq.${w.vintage || 'null'}&limit=1&select=id`);
+        // Check alle bestaande records (ook niet-pending)
+        // Zoek op naam zonder vintage filter zodat verwijderde items niet terugkomen
+        const existing = await sbGet(
+          `wines?name=ilike.${nm}&select=id,price_source,seen_count`
+        );
         if (!existing.length) {
+          // Nieuw: toevoegen als pending
           toInsert.push({
             name: w.name.trim(),
             producer: w.producer?.trim() || null,
@@ -324,8 +329,20 @@ async function saveUnmatchedAsPending(wines) {
             colour: w.colour || null,
             region: w.region?.split(' · ')[0] || null,
             country: w.region?.split(' · ')[1] || null,
-            price_source: 'pending'
+            price_source: 'pending',
+            seen_count: 1,
+            seen_list_price: w.price || null
           });
+        } else {
+          // Bestaand pending: seen_count ophogen
+          const pend = existing.find(e => e.price_source === 'pending');
+          if (pend) {
+            await sbPatch(`wines?id=eq.${pend.id}`, {
+              seen_count: (pend.seen_count || 1) + 1,
+              seen_list_price: w.price || null
+            });
+          }
+          // Niet-pending (goedgekeurd of handmatig verwijderd): NIET opnieuw aanmaken
         }
       } catch(e) { /* skip */ }
     }
