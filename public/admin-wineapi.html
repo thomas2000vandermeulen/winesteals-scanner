@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WineAPI Test — WineSteals Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--wine:#7B1C2E;--wine-dark:#4A0F1C;--gold:#C9A84C;--cream:#F8F4EE;--ink:#1A1208;--muted:#6B5E52;--border:rgba(123,28,46,0.15);--green:#2E7D32;--red:#C62828;--blue:#1565C0;--orange:#E65100}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+.admin-nav{background:var(--wine-dark);display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;position:sticky;top:0;z-index:100}
+.nav-brand{color:white;font-family:'Playfair Display',serif;font-size:17px;text-decoration:none;font-weight:700}
+.nav-links{display:flex;gap:4px}
+.nav-link{color:rgba(255,255,255,0.7);text-decoration:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500}
+.nav-link:hover{color:white;background:rgba(255,255,255,0.1)}
+.nav-link.active{color:white;background:rgba(255,255,255,0.18)}
+.container{max-width:1200px;margin:0 auto;padding:28px 32px}
+.page-header{margin-bottom:24px;display:flex;align-items:center;gap:12px}
+.page-header h1{font-family:'Playfair Display',serif;font-size:22px;color:var(--wine-dark)}
+.beta-badge{background:var(--gold);color:var(--wine-dark);font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;font-family:'DM Mono',monospace;letter-spacing:.05em}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.card{background:white;border-radius:10px;border:1px solid var(--border);padding:20px}
+.card h2{font-family:'Playfair Display',serif;font-size:16px;color:var(--wine-dark);margin-bottom:14px}
+.form-row{display:flex;gap:8px;margin-bottom:10px;align-items:flex-end}
+.fg{flex:1}
+.fg label{font-size:12px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em}
+.fg input,.fg select{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;background:white;font-family:'DM Sans',sans-serif}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--wine)}
+.btn{padding:8px 16px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:default}
+.btn-primary{background:var(--wine);color:white}
+.btn-primary:hover:not(:disabled){background:var(--wine-dark)}
+.btn-secondary{background:white;color:var(--wine);border:1.5px solid var(--wine)}
+.btn-green{background:var(--green);color:white}
+.result-box{margin-top:14px;background:#0d1117;border-radius:7px;padding:14px;overflow:auto;max-height:420px}
+.result-box pre{font-family:'DM Mono',monospace;font-size:12px;color:#e6edf3;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.status{display:inline-flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:12px;padding:4px 10px;border-radius:5px;margin-bottom:8px}
+.status.ok{background:#e8f5e9;color:var(--green)}
+.status.err{background:#ffebee;color:var(--red)}
+.status.loading{background:rgba(201,168,76,.15);color:#7a6020}
+.wine-result{border:1px solid var(--border);border-radius:7px;padding:12px;margin-bottom:8px;cursor:pointer;transition:background .1s}
+.wine-result:hover{background:rgba(123,28,46,.04)}
+.wine-result.selected{border-color:var(--wine);background:rgba(123,28,46,.04)}
+.wine-name{font-family:'Playfair Display',serif;font-size:15px;color:var(--wine-dark);font-style:italic}
+.wine-meta{font-size:12px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+.price-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.price-item:last-child{border-bottom:none}
+.price-val{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--wine)}
+.price-meta{font-size:11px;color:var(--muted)}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.info-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
+.info-row span:first-child{color:var(--muted)}
+.info-row span:last-child{font-weight:500}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-size:14px;color:white;z-index:9999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{background:var(--green)}
+.toast.error{background:var(--red)}
+.note{background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:7px;padding:10px 14px;font-size:13px;color:#7a6020;margin-bottom:20px}
+.note strong{font-weight:600}
+</style>
+</head>
+<body>
+
+<nav class="admin-nav">
+  <a class="nav-brand" href="/admin.html">🍷 WineSteals Admin</a>
+  <div class="nav-links">
+    <a href="/admin.html" class="nav-link">Wijnen</a>
+    <a href="/admin-prices.html" class="nav-link">Price Finder</a>
+    <a href="/admin-scans.html" class="nav-link">Scans</a>
+    <a href="/admin-restaurants.html" class="nav-link">Restaurants</a>
+    <a href="/admin-wineapi.html" class="nav-link active">WineAPI Test</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>WineAPI.io Test</h1>
+    <span class="beta-badge">BETA</span>
+  </div>
+
+  <div class="note">
+    <strong>Testomgeving</strong> — Deze pagina test de wineapi.io integratie los van de rest van de app. Niks hier raakt de bestaande database of scanner.
+  </div>
+
+  <div class="grid">
+
+    <!-- ZOEKEN -->
+    <div class="card">
+      <h2>1. Wijn zoeken</h2>
+      <div class="form-row">
+        <div class="fg">
+          <label>Zoekopdracht</label>
+          <input id="q-search" type="text" placeholder="bijv. Bandol Tempier" value="Barolo"/>
+        </div>
+        <div class="fg" style="max-width:80px">
+          <label>Limit</label>
+          <input id="q-limit" type="number" value="5" min="1" max="20"/>
+        </div>
+        <button class="btn btn-primary" onclick="doSearch()" id="btn-search">Zoek</button>
+      </div>
+
+      <div id="search-status"></div>
+      <div id="search-results"></div>
+    </div>
+
+    <!-- PRIJZEN -->
+    <div class="card">
+      <h2>2. Prijzen ophalen</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Klik een wijn aan links om de prijzen op te halen, of voer een ID in:</p>
+      <div class="form-row">
+        <div class="fg">
+          <label>Wine ID</label>
+          <input id="wine-id" type="text" placeholder="uuid..."/>
+        </div>
+        <button class="btn btn-primary" onclick="doPrices()" id="btn-prices">Ophalen</button>
+      </div>
+
+      <div id="prices-status"></div>
+      <div id="prices-results"></div>
+    </div>
+
+    <!-- IDENTIFICEREN -->
+    <div class="card">
+      <h2>3. Identificeren op tekst</h2>
+      <div class="form-row">
+        <div class="fg">
+          <label>Wijn omschrijving</label>
+          <input id="q-identify" type="text" placeholder="bijv. Domaine Tempier Bandol Rouge 2019"/>
+        </div>
+        <button class="btn btn-primary" onclick="doIdentify()" id="btn-identify">Identificeer</button>
+      </div>
+      <div id="identify-status"></div>
+      <div id="identify-results"></div>
+    </div>
+
+    <!-- RAW API TEST -->
+    <div class="card">
+      <h2>4. Raw API call</h2>
+      <div class="form-row">
+        <div class="fg">
+          <label>Endpoint (na api.wineapi.io)</label>
+          <input id="raw-endpoint" type="text" value="/wines/search?q=Pingus&limit=2"/>
+        </div>
+        <button class="btn btn-primary" onclick="doRaw()" id="btn-raw">Call</button>
+      </div>
+      <div id="raw-status"></div>
+      <div id="raw-result" style="display:none">
+        <div class="result-box"><pre id="raw-pre"></pre></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const WINEAPI_KEY = 'wapi_e1604c0e959c6d0935aeb379de7ba6a328a38844aab09fcce461e4dbc7feac09';
+const WINEAPI_BASE = 'https://api.wineapi.io';
+
+async function wineApi(endpoint) {
+  const r = await fetch(WINEAPI_BASE + endpoint, {
+    headers: { 'X-API-Key': WINEAPI_KEY, 'Accept': 'application/json' }
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || 'HTTP ' + r.status);
+  return data;
+}
+
+function setStatus(elId, msg, type) {
+  const el = document.getElementById(elId);
+  if (!msg) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="status ${type}">${msg}</div>`;
+}
+
+// ── ZOEKEN ──
+async function doSearch() {
+  const q = document.getElementById('q-search').value.trim();
+  const limit = document.getElementById('q-limit').value || 5;
+  if (!q) return;
+  const btn = document.getElementById('btn-search');
+  btn.disabled = true; btn.textContent = '...';
+  setStatus('search-status', 'Laden...', 'loading');
+  document.getElementById('search-results').innerHTML = '';
+  try {
+    const data = await wineApi(`/wines/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+    setStatus('search-status', `✓ ${data.wines?.length || 0} resultaten (${data.total} totaal)`, 'ok');
+    const wines = data.wines || data.results || data || [];
+    const list = Array.isArray(wines) ? wines : [];
+    document.getElementById('search-results').innerHTML = list.map(w => `
+      <div class="wine-result" onclick="selectWine('${w.id}', this)" data-id="${w.id}">
+        <div class="wine-name">${w.name || w.wine_name || '—'}</div>
+        <div class="wine-meta">${[w.winery, w.vintage, w.region, w.country].filter(Boolean).join(' · ')}</div>
+        ${w.averageRating ? `<div class="wine-meta" style="margin-top:3px">⭐ ${w.averageRating} (${w.ratingsCount} ratings)</div>` : ''}
+      </div>
+    `).join('') || '<p style="font-size:13px;color:var(--muted);padding:8px 0">Geen resultaten</p>';
+  } catch(e) {
+    setStatus('search-status', '✗ ' + e.message, 'err');
+  }
+  btn.disabled = false; btn.textContent = 'Zoek';
+}
+
+function selectWine(id, el) {
+  document.querySelectorAll('.wine-result').forEach(r => r.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('wine-id').value = id;
+  doPrices();
+}
+
+// ── PRIJZEN ──
+async function doPrices() {
+  const id = document.getElementById('wine-id').value.trim();
+  if (!id) return toast('Voer een wine ID in', 'error');
+  const btn = document.getElementById('btn-prices');
+  btn.disabled = true; btn.textContent = '...';
+  setStatus('prices-status', 'Laden...', 'loading');
+  document.getElementById('prices-results').innerHTML = '';
+  try {
+    const data = await wineApi(`/wines/${id}/prices`);
+    const prices = data.prices || data || [];
+    const list = Array.isArray(prices) ? prices : [];
+    const usdPrices = list.map(p => parseFloat(p.price)).filter(p => p > 0);
+    const avg = usdPrices.length ? (usdPrices.reduce((a,b)=>a+b,0)/usdPrices.length) : null;
+    const min = usdPrices.length ? Math.min(...usdPrices) : null;
+    const max = usdPrices.length ? Math.max(...usdPrices) : null;
+    const eurRate = 0.92;
+
+    setStatus('prices-status', `✓ ${list.length} prijzen gevonden`, 'ok');
+
+    let html = '';
+    if (avg) {
+      html += `<div class="divider"></div>
+      <div class="info-row"><span>Gem. USD</span><span>$${avg.toFixed(2)}</span></div>
+      <div class="info-row"><span>Gem. EUR ~</span><span style="color:var(--wine);font-size:15px;font-weight:600">€${(avg*eurRate).toFixed(2)}</span></div>
+      <div class="info-row"><span>Min / Max USD</span><span>$${min.toFixed(0)} – $${max.toFixed(0)}</span></div>
+      <div class="divider"></div>`;
+    }
+
+    html += list.slice(0,8).map(p => `
+      <div class="price-item">
+        <div>
+          <div style="font-size:13px;font-weight:500">${p.merchantName || 'Merchant'}</div>
+          <div class="price-meta">${p.currency} · ${new Date(p.fetchedAt).toLocaleDateString('nl-NL')}</div>
+        </div>
+        <div class="price-val">$${parseFloat(p.price).toFixed(2)}</div>
+      </div>
+    `).join('');
+
+    document.getElementById('prices-results').innerHTML = html || '<p style="font-size:13px;color:var(--muted)">Geen prijzen</p>';
+  } catch(e) {
+    setStatus('prices-status', '✗ ' + e.message, 'err');
+  }
+  btn.disabled = false; btn.textContent = 'Ophalen';
+}
+
+// ── IDENTIFICEREN ──
+async function doIdentify() {
+  const q = document.getElementById('q-identify').value.trim();
+  if (!q) return;
+  const btn = document.getElementById('btn-identify');
+  btn.disabled = true; btn.textContent = '...';
+  setStatus('identify-status', 'Laden...', 'loading');
+  document.getElementById('identify-results').innerHTML = '';
+  try {
+    const data = await wineApi(`/identify/text?text=${encodeURIComponent(q)}`);
+    setStatus('identify-status', '✓ Resultaat', 'ok');
+    const wines = data.wines || data.results || (Array.isArray(data) ? data : [data]);
+    document.getElementById('identify-results').innerHTML = wines.slice(0,3).map(w => `
+      <div class="wine-result" onclick="selectWine('${w.id}', this)" data-id="${w.id}">
+        <div class="wine-name">${w.name || '—'}</div>
+        <div class="wine-meta">${[w.winery, w.vintage, w.region].filter(Boolean).join(' · ')}</div>
+        ${w.confidence ? `<div class="wine-meta" style="margin-top:2px">Confidence: ${(w.confidence*100).toFixed(0)}%</div>` : ''}
+      </div>
+    `).join('') || '<p style="font-size:13px;color:var(--muted)">Geen resultaat</p>';
+  } catch(e) {
+    setStatus('identify-status', '✗ ' + e.message, 'err');
+  }
+  btn.disabled = false; btn.textContent = 'Identificeer';
+}
+
+// ── RAW ──
+async function doRaw() {
+  const endpoint = document.getElementById('raw-endpoint').value.trim();
+  if (!endpoint) return;
+  const btn = document.getElementById('btn-raw');
+  btn.disabled = true; btn.textContent = '...';
+  setStatus('raw-status', 'Laden...', 'loading');
+  const resultBox = document.getElementById('raw-result');
+  resultBox.style.display = 'none';
+  try {
+    const start = Date.now();
+    const r = await fetch(WINEAPI_BASE + endpoint, {
+      headers: { 'X-API-Key': WINEAPI_KEY, 'Accept': 'application/json' }
+    });
+    const ms = Date.now() - start;
+    const text = await r.text();
+    let pretty;
+    try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch { pretty = text; }
+    setStatus('raw-status', `${r.status} ${r.statusText} — ${ms}ms`, r.ok ? 'ok' : 'err');
+    document.getElementById('raw-pre').textContent = pretty.substring(0, 3000);
+    resultBox.style.display = 'block';
+  } catch(e) {
+    setStatus('raw-status', '✗ ' + e.message, 'err');
+  }
+  btn.disabled = false; btn.textContent = 'Call';
+}
+
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + (type || 'success') + ' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const t = e.target;
+  if (t.id === 'q-search' || t.id === 'q-limit') doSearch();
+  if (t.id === 'wine-id') doPrices();
+  if (t.id === 'q-identify') doIdentify();
+  if (t.id === 'raw-endpoint') doRaw();
+});
+</script>
+</body>
+</html>
