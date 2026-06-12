@@ -47,6 +47,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .delay-input{width:60px;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;text-align:center}
 .batch-size-input{width:60px;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;text-align:center}
 .warning{background:rgba(230,81,0,.08);border:1px solid rgba(230,81,0,.25);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--orange);margin-bottom:16px}
+.manual-search-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px}
+.mfg{display:flex;flex-direction:column;gap:4px}
+.mfg label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.mfg input{padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:14px;background:white;font-family:'DM Sans',sans-serif}
+.mfg input:focus{outline:none;border-color:var(--wine)}
+.vintage-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:12px}
+.vintage-card{border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:var(--cream)}
+.vintage-card.has-price{border-color:rgba(46,125,50,.3);background:rgba(46,125,50,.04)}
+.vintage-card.no-price{border-color:var(--border);opacity:.7}
+.vc-year{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--wine-dark)}
+.vc-price{font-size:15px;font-weight:600;color:var(--green);margin:2px 0}
+.vc-noprice{font-size:12px;color:var(--muted)}
+.vc-save{margin-top:8px;width:100%;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:500;background:var(--green);color:white}
+.vc-save:disabled{opacity:.4;cursor:default}
+.vc-saved{background:rgba(46,125,50,.12);color:var(--green);font-size:11px;padding:4px 8px;border-radius:4px;display:inline-block;margin-top:6px}
+.manual-result-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.save-all-btn{padding:8px 18px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:500;background:var(--wine);color:white}
+.save-all-btn:disabled{opacity:.4}
 .result-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
 .result-table th{text-align:left;padding:8px 10px;background:var(--wine-dark);color:white;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
 .result-table td{padding:7px 10px;border-bottom:1px solid var(--border)}
@@ -71,7 +89,44 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 <div class="container">
 
   <div class="card">
-    <h2>CellarTracker Batch Zoeker</h2>
+    <h2>Handmatig zoeken</h2>
+    <p>Zoek een specifiek wijnhuis of wijn op CellarTracker. Alle gevonden jaargangen met prijzen worden getoond — je kunt ze per stuk of allemaal in één klik opslaan.</p>
+
+    <div class="manual-search-row">
+      <div class="mfg" style="flex:2;min-width:200px">
+        <label>Wijn / producent</label>
+        <input id="ms-name" type="text" placeholder="bijv. Domaine Tempier Bandol" onkeydown="if(event.key==='Enter')manualSearch()"/>
+      </div>
+      <div class="mfg" style="flex:1;min-width:120px">
+        <label>Producent (optioneel)</label>
+        <input id="ms-producer" type="text" placeholder="bijv. Tempier" onkeydown="if(event.key==='Enter')manualSearch()"/>
+      </div>
+      <div class="mfg" style="width:90px">
+        <label>Jaar (optioneel)</label>
+        <input id="ms-vintage" type="number" placeholder="2019" min="1990" max="2030" onkeydown="if(event.key==='Enter')manualSearch()"/>
+      </div>
+      <div class="mfg" style="width:80px">
+        <label>Pending ID</label>
+        <input id="ms-wine-id" type="text" placeholder="uuid..." style="font-size:11px"/>
+      </div>
+      <button class="btn btn-primary" id="ms-btn" onclick="manualSearch()" style="align-self:flex-end">Zoek op CT</button>
+    </div>
+
+    <div id="ms-status" style="font-size:13px;color:var(--muted);margin-bottom:8px"></div>
+
+    <div id="ms-results" style="display:none">
+      <div class="manual-result-header">
+        <div>
+          <strong id="ms-wine-name" style="font-family:'Playfair Display',serif;font-size:16px;color:var(--wine-dark)"></strong>
+          <span id="ms-count" style="font-size:12px;color:var(--muted);margin-left:8px"></span>
+        </div>
+        <button class="save-all-btn" id="ms-save-all" onclick="saveAllVintages()">Sla alle op</button>
+      </div>
+      <div class="vintage-grid" id="ms-vintage-grid"></div>
+    </div>
+  </div>
+
+
     <p>Zoekt automatisch pending wijnen op CellarTracker en importeert alle beschikbare jaargangprijzen. Werkt alleen als je ingelogd bent op CellarTracker in dezelfde browser.</p>
 
     <div class="warning">
@@ -393,6 +448,170 @@ function exportResults(){
   a.href=URL.createObjectURL(blob);
   a.download='ct-batch-resultaten.csv';
   a.click();
+}
+
+// ── HANDMATIGE ZOEKER ──
+let manualVintages = [];
+let manualWineId = null;
+
+async function manualSearch() {
+  const name = document.getElementById('ms-name').value.trim();
+  const producer = document.getElementById('ms-producer').value.trim();
+  const vintage = document.getElementById('ms-vintage').value.trim();
+  const wineId = document.getElementById('ms-wine-id').value.trim();
+
+  if (!name) { document.getElementById('ms-status').textContent = 'Voer een naam in'; return; }
+
+  const btn = document.getElementById('ms-btn');
+  btn.disabled = true; btn.textContent = 'Zoeken...';
+  document.getElementById('ms-status').textContent = 'Zoeken op CellarTracker...';
+  document.getElementById('ms-results').style.display = 'none';
+  manualVintages = [];
+  manualWineId = wineId || null;
+
+  try {
+    const q = [name, producer, vintage].filter(Boolean).join(' ');
+    const searchUrl = CT+'/list.asp?Table=List&szSearch='+encodeURIComponent(q)+'&fInCellar=0&iUserOverride=0';
+    const r1 = await fetch(searchUrl, {credentials:'include'});
+    const html1 = await r1.text();
+    const iWines = [...new Set([...html1.matchAll(/iWine=(\d+)/g)].map(m=>m[1]))];
+
+    if (!iWines.length) {
+      document.getElementById('ms-status').textContent = '✗ Niet gevonden op CellarTracker';
+      btn.disabled = false; btn.textContent = 'Zoek op CT';
+      return;
+    }
+
+    document.getElementById('ms-status').textContent = `Gevonden: ${iWines.length} jaargangen — prijzen ophalen...`;
+
+    // Haal per iWine vintage + prijs op
+    const results = [];
+    for (const iWine of iWines.slice(0, 30)) {
+      try {
+        const wr = await fetch(CT+'/wine.asp?iWine='+iWine, {credentials:'include'});
+        const whtml = await wr.text();
+        const titleM = whtml.match(/<title>(\d{4})\s+([^,<]+)/);
+        const vint = titleM ? parseInt(titleM[1]) : null;
+        const wineName = titleM ? titleM[2].trim() : name;
+
+        const pr = await fetch(CT+'/wheretobuy/'+iWine+'/prices', {credentials:'include'});
+        const pj = await pr.json();
+        const ph = pj.html || '';
+        const pm = ph.match(/(\d+)[,\.](\d{2})/);
+        const price = pm ? parseFloat(pm[0].replace(',','.')) : null;
+
+        results.push({ iWine, vintage: vint, name: wineName, price });
+        await new Promise(r => setTimeout(r, 300));
+      } catch(e) { /* skip */ }
+    }
+
+    manualVintages = results;
+
+    // Toon resultaten
+    const withPrice = results.filter(v => v.price);
+    const wineName = results[0]?.name || name;
+    document.getElementById('ms-wine-name').textContent = wineName;
+    document.getElementById('ms-count').textContent = `${results.length} jaargangen gevonden, ${withPrice.length} met prijs`;
+    document.getElementById('ms-status').textContent = '';
+
+    renderManualResults(results);
+    document.getElementById('ms-results').style.display = 'block';
+    document.getElementById('ms-save-all').disabled = withPrice.length === 0;
+
+  } catch(e) {
+    document.getElementById('ms-status').textContent = 'Fout: ' + e.message;
+  }
+
+  btn.disabled = false; btn.textContent = 'Zoek op CT';
+}
+
+function renderManualResults(results) {
+  const grid = document.getElementById('ms-vintage-grid');
+  grid.innerHTML = results.sort((a,b) => (b.vintage||0)-(a.vintage||0)).map(v => `
+    <div class="vintage-card ${v.price ? 'has-price' : 'no-price'}" id="vc-${v.iWine}">
+      <div class="vc-year">${v.vintage || '?'}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">${v.name}</div>
+      ${v.price
+        ? `<div class="vc-price">€${v.price.toFixed(2)}</div>`
+        : `<div class="vc-noprice">Geen prijs beschikbaar</div>`
+      }
+      ${v.price
+        ? `<button class="vc-save" onclick="saveSingleVintage('${v.iWine}')">Opslaan</button>`
+        : `<a href="${CT}/wine.asp?iWine=${v.iWine}" target="_blank" style="font-size:11px;color:var(--blue);display:block;margin-top:6px">Open op CT →</a>`
+      }
+    </div>
+  `).join('');
+}
+
+async function saveSingleVintage(iWine) {
+  const v = manualVintages.find(x => x.iWine === iWine);
+  if (!v || !v.price) return;
+
+  const btn = document.querySelector(`#vc-${iWine} .vc-save`);
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+  try {
+    // Als er een wine_id is (vanuit pending), koppel eraan
+    if (manualWineId) {
+      await fetch(SB+'/wine_vintage_prices', {
+        method: 'POST',
+        headers: H({'Prefer':'resolution=merge-duplicates'}, true),
+        body: JSON.stringify({
+          wine_id: manualWineId,
+          vintage: v.vintage,
+          market_price_eur: v.price,
+          market_price_min: Math.round(v.price*.8*100)/100,
+          market_price_max: Math.round(v.price*1.3*100)/100,
+          price_source: 'cellartracker'
+        })
+      });
+    }
+
+    const card = document.getElementById('vc-'+iWine);
+    if (card) {
+      const saveBtn = card.querySelector('.vc-save');
+      if (saveBtn) saveBtn.replaceWith(Object.assign(document.createElement('div'), {className:'vc-saved', textContent:'✓ Opgeslagen'}));
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Opslaan'; }
+    alert('Fout: ' + e.message);
+  }
+}
+
+async function saveAllVintages() {
+  const withPrice = manualVintages.filter(v => v.price && v.vintage);
+  if (!withPrice.length) return;
+
+  const btn = document.getElementById('ms-save-all');
+  btn.disabled = true; btn.textContent = `Opslaan (0/${withPrice.length})...`;
+
+  let saved = 0;
+  for (const v of withPrice) {
+    await saveSingleVintage(v.iWine);
+    saved++;
+    btn.textContent = `Opslaan (${saved}/${withPrice.length})...`;
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  btn.textContent = `✓ ${saved} opgeslagen`;
+
+  // Als er een pending wine_id is, update ook de wine zelf
+  if (manualWineId) {
+    const prices = withPrice.map(v => v.price);
+    const avg = Math.round(prices.reduce((a,b)=>a+b,0)/prices.length*100)/100;
+    try {
+      await fetch(SB+'/wines?id=eq.'+manualWineId, {
+        method: 'PATCH',
+        headers: H({'Prefer':'return=minimal'}, true),
+        body: JSON.stringify({
+          market_price_eur: avg,
+          market_price_min: Math.round(avg*.8*100)/100,
+          market_price_max: Math.round(avg*1.3*100)/100,
+          price_source: 'cellartracker'
+        })
+      });
+    } catch(e) { /* skip */ }
+  }
 }
 
 // Init
