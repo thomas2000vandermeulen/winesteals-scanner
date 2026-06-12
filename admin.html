@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WineSteals Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--wine:#7B1C2E;--wine-dark:#4A0F1C;--gold:#C9A84C;--cream:#F8F4EE;--ink:#1A1208;--muted:#6B5E52;--border:rgba(123,28,46,0.15);--green:#2E7D32;--red:#C62828;--blue:#1565C0}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+.login-overlay{position:fixed;inset:0;background:var(--wine-dark);z-index:999;display:flex;align-items:center;justify-content:center}
+.login-overlay.hidden{display:none}
+.login-box{background:var(--cream);padding:48px 40px;border-radius:12px;width:360px;text-align:center}
+.login-box h1{font-family:'Playfair Display',serif;color:var(--wine-dark);margin-bottom:8px;font-size:24px}
+.login-box p{color:var(--muted);font-size:14px;margin-bottom:28px}
+.login-box input{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;margin-bottom:16px;background:white}
+.login-box button{width:100%;padding:12px;background:var(--wine);color:white;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer}
+.admin-nav{background:var(--wine-dark);display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;position:sticky;top:0;z-index:100}
+.nav-brand{color:white;font-family:'Playfair Display',serif;font-size:17px;text-decoration:none;font-weight:700}
+.nav-links{display:flex;gap:4px}
+.nav-link{color:rgba(255,255,255,0.7);text-decoration:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;transition:all .15s}
+.nav-link:hover{color:white;background:rgba(255,255,255,0.1)}
+.nav-link.active{color:white;background:rgba(255,255,255,0.18)}
+.container{max-width:1600px;margin:0 auto;padding:24px 32px}
+.tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:2px solid var(--border)}
+.tab-btn{padding:10px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px}
+.tab-btn.active{color:var(--wine);border-bottom-color:var(--wine)}
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:12px;background:white;border-radius:8px;border:1px solid var(--border)}
+.filter-row label{font-size:12px;color:var(--muted);white-space:nowrap}
+.filter-row select,.filter-row input{padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:white}
+.filter-row input.search{min-width:200px;flex:1}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500}
+.btn-primary{background:var(--wine);color:white}
+.btn-secondary{background:white;color:var(--wine);border:1.5px solid var(--wine)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-danger{background:var(--red);color:white}
+.btn-success{background:var(--green);color:white}
+.btn-edit{background:var(--blue);color:white}
+.btn-ct{background:#1565C0;color:white}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:9px 10px;background:var(--wine-dark);color:white;font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{background:#5a1020}
+th.nosort{cursor:default}
+th.nosort:hover{background:var(--wine-dark)}
+th .sa{margin-left:4px;opacity:.5;font-size:10px}
+th.sorted .sa{opacity:1}
+td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(123,28,46,.03)}
+tr.editing td{background:rgba(123,28,46,.07)}
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500}
+.badge-red{background:rgba(123,28,46,.1);color:var(--wine)}
+.badge-white{background:rgba(201,168,76,.15);color:#7a6020}
+.badge-sparkling{background:rgba(100,149,237,.15);color:#3b5998}
+.badge-fortified{background:rgba(139,90,43,.15);color:#6b4423}
+.badge-rose,.badge-rosé{background:rgba(255,105,180,.15);color:#c2185b}
+.badge-dessert{background:rgba(180,140,30,.15);color:#8a6000}
+.badge-orange{background:rgba(230,130,30,.15);color:#a05000}
+.badge-pending{background:rgba(107,94,82,.12);color:var(--muted)}
+td input[type=number],td input[type=text],td select{padding:4px 6px;border:1.5px solid var(--wine);border-radius:5px;font-size:12px;background:white}
+.vp-panel{border-left:4px solid var(--wine);padding:12px 16px;background:rgba(123,28,46,.04)}
+.vp-row{display:flex;gap:8px;align-items:center;margin-bottom:7px;flex-wrap:wrap}
+.vp-row label{font-size:12px;color:var(--muted);min-width:50px}
+.vp-row input{width:80px!important;padding:4px 6px;border:1.5px solid var(--border)!important;border-radius:5px;font-size:12px}
+.vp-add{display:flex;gap:8px;align-items:center;padding-top:8px;border-top:1px solid var(--border);flex-wrap:wrap}
+.expand-btn{background:none;border:none;cursor:pointer;color:var(--wine);font-size:12px;padding:2px}
+.empty{text-align:center;padding:60px;color:var(--muted)}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:500;color:white;z-index:9999;opacity:0;transform:translateY(12px);transition:all .25s;pointer-events:none;max-width:320px}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{background:var(--green)}
+.toast.error{background:var(--red)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:600px}
+.fg label{font-size:12px;color:var(--muted);display:block;margin-bottom:3px}
+.fg input,.fg select{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:14px;background:white}
+.price-inline{display:flex;gap:4px;align-items:center;flex-wrap:nowrap}
+.price-inline input{width:80px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px}
+.seen-badge{display:inline-block;padding:2px 6px;border-radius:10px;font-size:11px;background:rgba(201,168,76,.2);color:#7a6020}
+.bulk-bar{display:flex;gap:8px;align-items:center;padding:10px 14px;background:white;border-radius:8px;border:1px solid var(--border);margin-bottom:12px}
+.bulk-bar span{font-size:13px;color:var(--muted);flex:1}
+.ct-link{font-size:11px;color:var(--blue);text-decoration:underline;display:block;margin-top:2px}
+</style>
+</head>
+<body>
+
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <h1>WineSteals</h1>
+    <p>Admin toegang vereist</p>
+    <input type="password" id="pw-input" placeholder="Wachtwoord" onkeydown="if(event.key==='Enter')checkPw()"/>
+    <button onclick="checkPw()">Inloggen</button>
+  </div>
+</div>
+
+<nav class="admin-nav">
+  <a class="nav-brand" href="/admin.html">🍷 WineSteals Admin</a>
+  <div class="nav-links">
+    <a href="/admin.html" class="nav-link active">Wijnen</a>
+    <a href="/admin-prices.html" class="nav-link">Price Finder</a>
+    <a href="/admin-scans.html" class="nav-link">Scans</a>
+    <a href="/admin-restaurants.html" class="nav-link">Restaurants</a>
+    <a href="/admin-wineapi.html" class="nav-link">WineAPI</a>
+    <a href="/admin-ct-batch.html" class="nav-link">CT Batch</a>
+  </div>
+  <div style="display:flex;gap:14px;font-size:12px;color:rgba(255,255,255,0.75)">
+    <span>Totaal: <strong id="s-total" style="color:#C9A84C">–</strong></span>
+    <span>Pending: <strong id="s-pending" style="color:#C9A84C">–</strong></span>
+    <span>Rood: <strong id="s-red" style="color:#C9A84C">–</strong></span>
+    <span>Wit: <strong id="s-white" style="color:#C9A84C">–</strong></span>
+    <span>Sparkling: <strong id="s-sparkling" style="color:#C9A84C">–</strong></span>
+    <span>VP: <strong id="s-vintage" style="color:#C9A84C">–</strong></span>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('priced')">Met prijs</button>
+    <button class="tab-btn" onclick="switchTab('pending')">Pending</button>
+    <button class="tab-btn" onclick="switchTab('add')">+ Toevoegen</button>
+  </div>
+
+  <div id="tab-priced">
+    <div class="filter-row">
+      <label>Zoek:</label><input class="search" id="q" type="text" placeholder="naam, producent, regio..." oninput="applyFilters()"/>
+      <label>Kleur:</label>
+      <select id="f-colour" onchange="applyFilters()">
+        <option value="">Alle</option>
+        <option value="red">Rood</option><option value="white">Wit</option>
+        <option value="sparkling">Sparkling</option><option value="rosé">Rosé</option><option value="dessert">Dessert</option>
+      </select>
+      <label>Land:</label><select id="f-country" onchange="applyFilters()"><option value="">Alle landen</option></select>
+      <label>Regio:</label><select id="f-region" onchange="applyFilters()"><option value="">Alle regio's</option></select>
+      <label>Prijs:</label>
+      <select id="f-price" onchange="applyFilters()">
+        <option value="">Alle</option>
+        <option value="0-30">€0–30</option><option value="30-75">€30–75</option>
+        <option value="75-200">€75–200</option><option value="200+">€200+</option>
+        <option value="none">Geen prijs</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="clearFilters()">✕ Reset</button>
+      <button class="btn btn-secondary btn-sm" onclick="loadPriced()">↻</button>
+      <span id="f-count" style="font-size:12px;color:var(--muted);margin-left:4px"></span>
+    </div>
+    <div id="priced-wrap"><div class="empty"><p>Laden...</p></div></div>
+  </div>
+
+  <div id="tab-pending" style="display:none">
+    <div class="filter-row">
+      <label>Zoek:</label><input class="search" id="q-pending" type="text" placeholder="naam, producent, restaurant..." oninput="applyPendingFilters()"/>
+      <label>Kleur:</label>
+      <select id="pf-colour" onchange="applyPendingFilters()">
+        <option value="">Alle kleuren</option>
+        <option value="red">Rood</option><option value="white">Wit</option>
+        <option value="sparkling">Sparkling</option><option value="rosé">Rosé</option><option value="dessert">Dessert</option>
+      </select>
+      <label>Land:</label><select id="pf-country" onchange="applyPendingFilters()"><option value="">Alle landen</option></select>
+      <label>Gezien:</label>
+      <select id="pf-seen" onchange="applyPendingFilters()">
+        <option value="">Alle</option><option value="1">1×</option><option value="2">2×+</option><option value="5">5×+</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="clearPendingFilters()">✕ Reset</button>
+      <button class="btn btn-secondary btn-sm" onclick="loadPending()">↻</button>
+      <span id="pf-count" style="font-size:12px;color:var(--muted);margin-left:4px"></span>
+    </div>
+    <div class="bulk-bar" id="bulk-bar" style="display:none">
+      <span id="bulk-label">0 geselecteerd</span>
+      <button class="btn btn-danger btn-sm" onclick="bulkDelete()">🗑 Verwijder geselecteerde</button>
+      <button class="btn btn-secondary btn-sm" onclick="clearSelection()">✕ Deselecteer</button>
+    </div>
+    <div id="pending-wrap"><div class="empty"><p>Laden...</p></div></div>
+  </div>
+
+  <div id="tab-add" style="display:none">
+    <h3 style="font-family:'Playfair Display',serif;margin-bottom:20px;color:var(--wine-dark)">Nieuwe wijn toevoegen</h3>
+    <div class="form-grid">
+      <div class="fg"><label>Naam *</label><input id="f-name" type="text" placeholder="bijv. Barolo Riserva"></div>
+      <div class="fg"><label>Producent *</label><input id="f-producer" type="text" placeholder="bijv. Ceretto"></div>
+      <div class="fg"><label>Jaargang</label><input id="f-vintage" type="number" placeholder="2019"></div>
+      <div class="fg"><label>Kleur</label>
+        <select id="f-colour-add">
+          <option value="red">Rood</option><option value="white">Wit</option>
+          <option value="sparkling">Sparkling</option><option value="rosé">Rosé</option><option value="dessert">Dessert</option>
+        </select>
+      </div>
+      <div class="fg"><label>Marktprijs (€)</label><input id="f-price-add" type="number" placeholder="65"></div>
+      <div class="fg"><label>Regio</label><input id="f-region-add" type="text" placeholder="bijv. Bordeaux"></div>
+      <div class="fg"><label>Land</label><input id="f-country-add" type="text" placeholder="bijv. France"></div>
+      <div class="fg"><label>Appellation</label><input id="f-appellation" type="text" placeholder="bijv. Barolo DOCG"></div>
+    </div>
+    <div class="fg" style="max-width:290px;margin-top:12px"><label>Druif</label><input id="f-grape" type="text" placeholder="bijv. Nebbiolo"></div>
+    <button class="btn btn-primary" onclick="addWine()" style="margin-top:16px">Wijn toevoegen</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
+const ADMIN_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjAwMjUzMSwiZXhwIjoyMDkxNTc4NTMxfQ.8Ok37JAr6c4IDb4RZuOKY2nddje7e-nLdQYa7jLUJhs';
+const PW='winesteals2026';
+const SB='https://kdhczlabjecqxlyuxprl.supabase.co/rest/v1';
+const CT='https://www.cellartracker.com';
+
+let allPriced=[], allPending=[], expanded=new Set(), editingId=null;
+let sortCol='name', sortDir=1;
+let pendingSortCol='name', pendingSortDir=1;
+let selectedPending=new Set();
+
+function checkPw(){
+  if(document.getElementById('pw-input').value===PW){
+    localStorage.setItem('ws_aa',btoa(PW));
+    document.getElementById('login-overlay').classList.add('hidden');
+    init();
+  } else document.getElementById('pw-input').style.borderColor='red';
+}
+
+const H=(x,useAdmin)=>{const k=useAdmin?ADMIN_KEY:KEY;return {'apikey':k,'Authorization':'Bearer '+k,'Content-Type':'application/json',...x};};
+const HD=x=>H(x,true);
+
+async function api(path,method,body){
+  const isWrite=method&&method!=='GET';
+  const r=await fetch(SB+path,{
+    method:method||'GET',
+    headers:H(method==='GET'||!method?{'Prefer':'count=exact','Range-Unit':'items','Range':'0-9999'}:{'Prefer':'return=minimal'},isWrite),
+    body:body?JSON.stringify(body):null
+  });
+  if(r.status!==200&&r.status!==201&&r.status!==204&&r.status!==206){
+    const t=await r.text().catch(()=>'');
+    throw new Error(t||'HTTP '+r.status);
+  }
+  if(!method||method==='GET'){
+    const d=await r.json().catch(()=>[]);
+    return{data:d,count:parseInt((r.headers.get('content-range')||'').split('/')[1])||d.length};
+  }
+  return{};
+}
+async function apiCount(path){
+  const r=await fetch(SB+path,{method:'HEAD',headers:H({'Prefer':'count=exact'})});
+  return parseInt((r.headers.get('content-range')||'').split('/')[1])||0;
+}
+
+async function init(){await Promise.all([loadStats(),loadPriced(),loadPending()]);}
+
+async function loadStats(){
+  try{
+    const[tot,pen,red,wht,spr,vnt]=await Promise.all([
+      apiCount('/wines?select=id&price_source=neq.pending'),
+      apiCount('/wines?select=id&price_source=eq.pending'),
+      apiCount('/wines?select=id&colour=eq.red&price_source=neq.pending'),
+      apiCount('/wines?select=id&colour=eq.white&price_source=neq.pending'),
+      apiCount('/wines?select=id&colour=eq.sparkling&price_source=neq.pending'),
+      apiCount('/wine_vintage_prices?select=id'),
+    ]);
+    document.getElementById('s-total').textContent=tot;
+    document.getElementById('s-pending').textContent=pen;
+    document.getElementById('s-red').textContent=red;
+    document.getElementById('s-white').textContent=wht;
+    document.getElementById('s-sparkling').textContent=spr;
+    document.getElementById('s-vintage').textContent=vnt;
+  }catch(e){console.warn(e.message);}
+}
+
+// ── PRICED TAB ──
+async function loadPriced(){
+  document.getElementById('priced-wrap').innerHTML='<div class="empty"><p>Laden...</p></div>';
+  try{
+    const{data}=await api('/wines?price_source=neq.pending&order=name.asc&limit=10000&select=id,name,producer,vintage,region,country,appellation,grape,colour,market_price_eur,price_source,created_at');
+    allPriced=data;
+    buildFilterDropdowns();
+    applyFilters();
+  }catch(e){toast('Fout: '+e.message,'error');}
+}
+
+function buildFilterDropdowns(){
+  const countries=[...new Set(allPriced.map(w=>w.country).filter(Boolean))].sort();
+  const regions=[...new Set(allPriced.map(w=>w.region).filter(Boolean))].sort();
+  const cd=document.getElementById('f-country');const rv=cd.value;
+  cd.innerHTML='<option value="">Alle landen</option>'+countries.map(c=>`<option value="${c}"${c===rv?' selected':''}>${c}</option>`).join('');
+  const rd=document.getElementById('f-region');const rval=rd.value;
+  rd.innerHTML="<option value=''>Alle regio's</option>"+regions.map(r=>`<option value="${r}"${r===rval?' selected':''}>${r}</option>`).join('');
+}
+
+function applyFilters(){
+  const q=(document.getElementById('q')?.value||'').toLowerCase();
+  const fc=document.getElementById('f-colour')?.value||'';
+  const fco=document.getElementById('f-country')?.value||'';
+  const fr=document.getElementById('f-region')?.value||'';
+  const fp=document.getElementById('f-price')?.value||'';
+  let filtered=allPriced.filter(w=>{
+    if(q&&![w.name,w.producer,w.region,w.country,w.appellation,w.grape].join(' ').toLowerCase().includes(q))return false;
+    if(fc&&w.colour!==fc)return false;
+    if(fco&&w.country!==fco)return false;
+    if(fr&&w.region!==fr)return false;
+    if(fp){const p=w.market_price_eur||0;
+      if(fp==='none'&&p>0)return false;
+      if(fp==='0-30'&&(p<=0||p>30))return false;
+      if(fp==='30-75'&&(p<30||p>75))return false;
+      if(fp==='75-200'&&(p<75||p>200))return false;
+      if(fp==='200+'&&p<200)return false;
+    }
+    return true;
+  });
+  filtered.sort((a,b)=>{
+    let av=a[sortCol]??'',bv=b[sortCol]??'';
+    if(typeof av==='number'&&typeof bv==='number')return(av-bv)*sortDir;
+    return String(av).localeCompare(String(bv))*sortDir;
+  });
+  document.getElementById('f-count').textContent=filtered.length+' van '+allPriced.length;
+  renderPriced(filtered);
+}
+
+function clearFilters(){
+  ['q','f-colour','f-country','f-region','f-price'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  applyFilters();
+}
+
+function setSort(col){
+  if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=1;}
+  applyFilters();
+  document.querySelectorAll('#tab-priced th[data-col]').forEach(th=>{
+    th.classList.toggle('sorted',th.dataset.col===col);
+    const a=th.querySelector('.sa');
+    if(a)a.textContent=th.dataset.col===col?(sortDir===1?'↑':'↓'):'↕';
+  });
+}
+
+function renderPriced(wines){
+  const el=document.getElementById('priced-wrap');
+  if(!wines.length){el.innerHTML='<div class="empty"><p>Geen wijnen gevonden</p></div>';return;}
+  let h='<table><thead><tr>';
+  const cols=[
+    {key:'',label:'',w:'30px',nosort:true},
+    {key:'name',label:'Naam'},{key:'producer',label:'Producent'},
+    {key:'vintage',label:'Jaar',w:'70px'},{key:'colour',label:'Kleur',w:'90px'},
+    {key:'region',label:'Regio'},{key:'country',label:'Land',w:'90px'},
+    {key:'market_price_eur',label:'Prijs',w:'80px'},{key:'price_source',label:'Bron',w:'80px'},
+    {key:'created_at',label:'Datum',w:'90px'},{key:'',label:'Acties',w:'120px',nosort:true},
+  ];
+  cols.forEach(c=>{
+    if(!c.key||c.nosort)h+=`<th class="nosort"${c.w?' style="width:'+c.w+'"':''}>${c.label}</th>`;
+    else h+=`<th data-col="${c.key}"${c.w?' style="width:'+c.w+'"':''} onclick="setSort('${c.key}')">${c.label}<span class="sa">${c.key===sortCol?(sortDir===1?'↑':'↓'):'↕'}</span></th>`;
+  });
+  h+='</tr></thead><tbody>';
+  for(const w of wines){
+    const isEditing=editingId===w.id;
+    const exp=expanded.has(w.id);
+    const dateStr=w.created_at?w.created_at.slice(0,10):'';
+    if(isEditing){
+      h+=`<tr class="editing">
+        <td><button class="expand-btn" onclick="toggleExp('${w.id}')">${exp?'▼':'▶'}</button></td>
+        <td><input id="e-name-${w.id}" value="${esc(w.name)}" style="width:180px"></td>
+        <td><input id="e-producer-${w.id}" value="${esc(w.producer||'')}" style="width:140px"></td>
+        <td><input id="e-vintage-${w.id}" type="text" placeholder="NV" style="width:60px" value="${w.vintage||''}"></td>
+        <td><select id="e-colour-${w.id}">${['red','white','sparkling','rosé','fortified','dessert','orange'].map(c=>`<option value="${c}"${w.colour===c?' selected':''}>${c}</option>`).join('')}</select></td>
+        <td><input id="e-region-${w.id}" value="${esc(w.region||'')}" style="width:120px"></td>
+        <td><input id="e-country-${w.id}" value="${esc(w.country||'')}" style="width:90px"></td>
+        <td><input id="e-price-${w.id}" type="number" value="${w.market_price_eur||''}" style="width:70px"></td>
+        <td><input id="e-source-${w.id}" value="${esc(w.price_source||'')}" style="width:70px"></td>
+        <td>${dateStr}</td>
+        <td><button class="btn btn-success btn-sm" onclick="saveEdit('${w.id}')">✓</button> <button class="btn btn-secondary btn-sm" onclick="cancelEdit()">✕</button></td>
+      </tr>`;
+    }else{
+      h+=`<tr>
+        <td><button class="expand-btn" onclick="toggleExp('${w.id}')">${exp?'▼':'▶'}</button></td>
+        <td><strong>${esc(w.name)}</strong></td>
+        <td style="color:var(--muted);font-size:12px">${esc(w.producer||'')}</td>
+        <td>${w.vintage||'NV'}</td>
+        <td><span class="badge badge-${w.colour||'red'}">${w.colour||'?'}</span></td>
+        <td style="font-size:12px">${esc(w.region||'')}</td>
+        <td style="font-size:12px">${esc(w.country||'')}</td>
+        <td><strong>${w.market_price_eur?'€'+w.market_price_eur:'–'}</strong></td>
+        <td style="font-size:11px;color:var(--muted)">${w.price_source||''}</td>
+        <td style="font-size:11px;color:var(--muted)">${dateStr}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-edit btn-sm" onclick="startEdit('${w.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="delWine('${w.id}',this)">🗑</button>
+        </td>
+      </tr>`;
+    }
+    if(exp)h+=`<tr><td colspan="11" style="padding:0"><div class="vp-panel" id="vp-${w.id}"><em style="font-size:13px;color:var(--muted)">Laden...</em></div></td></tr>`;
+  }
+  h+='</tbody></table>';
+  el.innerHTML=h;
+  for(const id of expanded){const p=document.getElementById('vp-'+id);if(p)loadVP(id,p);}
+}
+
+function startEdit(id){editingId=id;applyFilters();}
+function cancelEdit(){editingId=null;applyFilters();}
+async function saveEdit(id){
+  const vintage=(()=>{const v=document.getElementById('e-vintage-'+id)?.value?.trim();if(!v||v.toLowerCase()==='nv')return null;const yr=parseInt(v);return(yr>=1900&&yr<=2030)?yr:null;})();
+  const w={name:document.getElementById('e-name-'+id)?.value.trim(),producer:document.getElementById('e-producer-'+id)?.value.trim()||null,vintage,colour:document.getElementById('e-colour-'+id)?.value,region:document.getElementById('e-region-'+id)?.value.trim()||null,country:document.getElementById('e-country-'+id)?.value.trim()||null,market_price_eur:parseFloat(document.getElementById('e-price-'+id)?.value)||null,price_source:document.getElementById('e-source-'+id)?.value.trim()||'manual'};
+  if(w.market_price_eur){w.market_price_min=Math.round(w.market_price_eur*.8*100)/100;w.market_price_max=Math.round(w.market_price_eur*1.3*100)/100;}
+  try{await api('/wines?id=eq.'+id,'PATCH',w);const idx=allPriced.findIndex(x=>x.id===id);if(idx>=0)allPriced[idx]={...allPriced[idx],...w};editingId=null;toast('Opgeslagen ✓');applyFilters();loadStats();}
+  catch(e){toast('Fout: '+e.message,'error');}
+}
+async function delWine(id,btn){
+  if(!confirm('Wijn verwijderen?'))return;
+  btn.textContent='...';btn.disabled=true;
+  try{await api('/wines?id=eq.'+id,'DELETE');allPriced=allPriced.filter(w=>w.id!==id);toast('Verwijderd ✓');applyFilters();loadStats();}
+  catch(e){toast('Fout: '+e.message,'error');btn.textContent='🗑';btn.disabled=false;}
+}
+function toggleExp(id){
+  if(expanded.has(id))expanded.delete(id);else expanded.add(id);
+  applyFilters();
+}
+async function loadVP(wineId,panel){
+  try{const{data}=await api('/wine_vintage_prices?wine_id=eq.'+wineId+'&order=vintage.desc&limit=50&select=id,vintage,market_price_eur,market_price_min,market_price_max');renderVP(wineId,panel,data);}
+  catch(e){panel.innerHTML='<p style="color:red;font-size:13px">'+esc(e.message)+'</p>';}
+}
+function renderVP(wineId,panel,rows){
+  let h='<div style="font-size:13px;font-weight:600;color:var(--wine-dark);margin-bottom:10px">Jaargangprijzen</div>';
+  for(const r of rows){
+    h+=`<div class="vp-row"><label><strong>${r.vintage}</strong></label><label>€</label><input type="number" id="ve-${r.id}" value="${r.market_price_eur||''}"><label>min</label><input type="number" id="vm-${r.id}" value="${r.market_price_min||''}"><label>max</label><input type="number" id="vx-${r.id}" value="${r.market_price_max||''}"><button class="btn btn-success btn-sm" onclick="saveVP('${r.id}','${wineId}')">💾</button><button class="btn btn-danger btn-sm" onclick="delVP('${r.id}','${wineId}')">✕</button></div>`;
+  }
+  if(!rows.length)h+='<p style="font-size:13px;color:var(--muted);margin-bottom:8px">Nog geen jaargangprijzen.</p>';
+  h+=`<div class="vp-add"><label style="font-size:12px;color:var(--muted)">Toevoegen:</label><input type="number" id="ny-${wineId}" placeholder="Jaargang" style="width:90px"><input type="number" id="np-${wineId}" placeholder="€ prijs" style="width:85px"><input type="number" id="nn-${wineId}" placeholder="Min" style="width:75px"><input type="number" id="nx-${wineId}" placeholder="Max" style="width:75px"><button class="btn btn-primary btn-sm" onclick="addVP('${wineId}')">+ Toevoegen</button></div>`;
+  panel.innerHTML=h;
+}
+async function saveVP(rowId,wineId){
+  const p=parseFloat(document.getElementById('ve-'+rowId)?.value);const mn=parseFloat(document.getElementById('vm-'+rowId)?.value)||null;const mx=parseFloat(document.getElementById('vx-'+rowId)?.value)||null;
+  if(!p)return toast('Voer een prijs in','error');
+  try{await api('/wine_vintage_prices?id=eq.'+rowId,'PATCH',{market_price_eur:p,market_price_min:mn,market_price_max:mx,updated_at:new Date().toISOString()});toast('Opgeslagen ✓');}
+  catch(e){toast('Fout: '+e.message,'error');}
+}
+async function addVP(wineId){
+  const yr=parseInt(document.getElementById('ny-'+wineId)?.value);const pr=parseFloat(document.getElementById('np-'+wineId)?.value);
+  if(!yr||!pr)return toast('Jaargang en prijs verplicht','error');
+  const mn=parseFloat(document.getElementById('nn-'+wineId)?.value)||Math.round(pr*.8*100)/100;const mx=parseFloat(document.getElementById('nx-'+wineId)?.value)||Math.round(pr*1.3*100)/100;
+  try{await api('/wine_vintage_prices','POST',{wine_id:wineId,vintage:yr,market_price_eur:pr,market_price_min:mn,market_price_max:mx,price_source:'manual'});toast('Jaargang toegevoegd ✓');const panel=document.getElementById('vp-'+wineId);if(panel)loadVP(wineId,panel);loadStats();}
+  catch(e){toast('Fout: '+e.message,'error');}
+}
+async function delVP(rowId,wineId){
+  if(!confirm('Verwijderen?'))return;
+  try{await api('/wine_vintage_prices?id=eq.'+rowId,'DELETE');toast('Verwijderd ✓');const panel=document.getElementById('vp-'+wineId);if(panel)loadVP(wineId,panel);loadStats();}
+  catch(e){toast('Fout: '+e.message,'error');}
+}
+
+// ── PENDING TAB ──
+async function loadPending(){
+  document.getElementById('pending-wrap').innerHTML='<div class="empty"><p>Laden...</p></div>';
+  selectedPending.clear();updateBulkBar();
+  try{
+    const{data,count}=await api('/wines?price_source=eq.pending&order=name.asc&limit=10000&select=id,name,producer,vintage,region,country,colour,seen_count,seen_list_price,seen_at_restaurant,created_at');
+    allPending=data;
+    document.getElementById('s-pending').textContent=count;
+    buildPendingDropdowns();applyPendingFilters();
+  }catch(e){toast('Fout: '+e.message,'error');}
+}
+
+function buildPendingDropdowns(){
+  const countries=[...new Set(allPending.map(w=>w.country).filter(Boolean))].sort();
+  const cd=document.getElementById('pf-country');const prev=cd.value;
+  cd.innerHTML='<option value="">Alle landen</option>'+countries.map(c=>`<option value="${c}"${c===prev?' selected':''}>${c}</option>`).join('');
+}
+
+function applyPendingFilters(){
+  const q=(document.getElementById('q-pending')?.value||'').toLowerCase();
+  const fc=document.getElementById('pf-colour')?.value||'';
+  const fco=document.getElementById('pf-country')?.value||'';
+  const fs=parseInt(document.getElementById('pf-seen')?.value)||0;
+  let filtered=allPending.filter(w=>{
+    if(q&&![w.name||'',w.producer||'',w.seen_at_restaurant||'',w.region||''].join(' ').toLowerCase().includes(q))return false;
+    if(fc&&w.colour!==fc)return false;
+    if(fco&&w.country!==fco)return false;
+    if(fs&&(w.seen_count||1)<fs)return false;
+    return true;
+  });
+  filtered.sort((a,b)=>{
+    let av=a[pendingSortCol]??'',bv=b[pendingSortCol]??'';
+    if(typeof av==='number'&&typeof bv==='number')return(av-bv)*pendingSortDir;
+    return String(av).localeCompare(String(bv))*pendingSortDir;
+  });
+  document.getElementById('pf-count').textContent=filtered.length+' van '+allPending.length;
+  renderPending(filtered);
+}
+
+function clearPendingFilters(){
+  ['q-pending','pf-colour','pf-country','pf-seen'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  applyPendingFilters();
+}
+
+function setPendingSort(col){
+  if(pendingSortCol===col)pendingSortDir*=-1;else{pendingSortCol=col;pendingSortDir=1;}
+  applyPendingFilters();
+  document.querySelectorAll('#tab-pending th[data-col]').forEach(th=>{
+    th.classList.toggle('sorted',th.dataset.col===col);
+    const a=th.querySelector('.sa');
+    if(a)a.textContent=th.dataset.col===col?(pendingSortDir===1?'↑':'↓'):'↕';
+  });
+}
+
+function renderPending(wines){
+  const el=document.getElementById('pending-wrap');
+  if(!wines.length){el.innerHTML='<div class="empty"><p>Geen pending wijnen gevonden</p></div>';return;}
+  let h='<table><thead><tr>';
+  const cols=[
+    {key:'check',label:'<input type="checkbox" id="sel-all" onchange="toggleSelectAll(this)">',nosort:true,w:'36px'},
+    {key:'name',label:'Naam'},
+    {key:'producer',label:'Producent',w:'140px'},
+    {key:'vintage',label:'Jaar',w:'60px'},
+    {key:'colour',label:'Kleur',w:'90px'},
+    {key:'region',label:'Regio',w:'110px'},
+    {key:'country',label:'Land',w:'80px'},
+    {key:'seen_count',label:'Gezien',w:'65px'},
+    {key:'seen_list_price',label:'Lijstprijs',w:'85px'},
+    {key:'seen_at_restaurant',label:'Restaurant',w:'130px'},
+    {key:'',label:'Marktprijs',nosort:true,w:'240px'},
+    {key:'',label:'Acties',nosort:true,w:'90px'},
+  ];
+  cols.forEach(c=>{
+    if(c.nosort)h+=`<th class="nosort"${c.w?' style="width:'+c.w+'"':''}>${c.label}</th>`;
+    else h+=`<th data-col="${c.key}"${c.w?' style="width:'+c.w+'"':''} onclick="setPendingSort('${c.key}')">${c.label}<span class="sa">${c.key===pendingSortCol?(pendingSortDir===1?'↑':'↓'):'↕'}</span></th>`;
+  });
+  h+='</tr></thead><tbody>';
+  for(const w of wines){
+    const checked=selectedPending.has(w.id)?'checked':'';
+    const seenCount=w.seen_count||1;
+    const seenBadge=seenCount>1?`<span class="seen-badge">${seenCount}×</span>`:'';
+    const listPrice=w.seen_list_price?`€${w.seen_list_price}`:'–';
+    const dateStr=w.created_at?w.created_at.slice(0,10):'';
+    // Bouw CT zoekterm
+    const ctQ=encodeURIComponent([w.name,w.producer,w.vintage].filter(Boolean).join(' '));
+    const ctSearchUrl=`${CT}/list.asp?Table=List&szSearch=${ctQ}&fInCellar=0&iUserOverride=0`;
+    h+=`<tr id="pr-${w.id}">
+      <td><input type="checkbox" ${checked} onchange="toggleSelect('${w.id}',this)"></td>
+      <td><strong>${esc(w.name)}</strong><div style="font-size:11px;color:var(--muted)">${dateStr}</div></td>
+      <td style="font-size:12px;color:var(--muted)">${esc(w.producer||'')}</td>
+      <td>${w.vintage||'NV'}</td>
+      <td>
+        <select id="pc-${w.id}" style="width:90px;padding:4px 6px;border:1.5px solid var(--border);border-radius:5px;font-size:12px">
+          ${['','red','white','sparkling','rosé','dessert','orange','fortified'].map(c=>`<option value="${c}"${w.colour===c?' selected':''}>${c||'onbekend'}</option>`).join('')}
+        </select>
+      </td>
+      <td style="font-size:12px;color:var(--muted)">${esc(w.region||'')}</td>
+      <td style="font-size:12px">${esc(w.country||'')}</td>
+      <td>${seenBadge} <span style="font-size:12px;color:var(--muted)">${seenCount}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${listPrice}</td>
+      <td style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(w.seen_at_restaurant||'')}">${esc(w.seen_at_restaurant||'–')}</td>
+      <td>
+        <div class="price-inline">
+          <span style="color:var(--muted);font-size:13px">€</span>
+          <input type="number" id="pp-${w.id}" placeholder="marktprijs" step="0.5" min="1">
+          <button class="btn btn-success btn-sm" onclick="approvePending('${w.id}')">✔ OK</button>
+          <button class="btn btn-ct btn-sm" id="ct-${w.id}" onclick="ctSearch('${w.id}','${esc(w.name)}','${esc(w.producer||'')}','${w.vintage||''}')" title="Zoek prijs op CellarTracker">CT</button>
+        </div>
+        <div id="ct-link-${w.id}"></div>
+      </td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-edit btn-sm" onclick="editPending('${w.id}')" title="Bewerken">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="delPending('${w.id}',this)" title="Verwijderen">🗑</button>
+      </td>
+    </tr>`;
+  }
+  h+='</tbody></table>';
+  el.innerHTML=h;
+}
+
+// ── CELLARTRACKER ZOEKEN ──
+async function ctSearch(id, name, producer, vintage) {
+  const btn = document.getElementById('ct-'+id);
+  const priceInput = document.getElementById('pp-'+id);
+  const linkDiv = document.getElementById('ct-link-'+id);
+  if(btn){btn.textContent='...';btn.disabled=true;}
+  try {
+    const q = [name, producer, vintage].filter(Boolean).join(' ');
+    const searchUrl = CT+'/list.asp?Table=List&szSearch='+encodeURIComponent(q)+'&fInCellar=0&iUserOverride=0';
+    const r1 = await fetch(searchUrl, {credentials:'include'});
+    const html1 = await r1.text();
+    const m = html1.match(/wine\.asp\?iWine=(\d+)/);
+    if (!m) {
+      toast('Niet gevonden op CellarTracker', 'error');
+      if(linkDiv) linkDiv.innerHTML = `<a href="${searchUrl}" target="_blank" class="ct-link">🔗 Zoek handmatig op CT</a>`;
+      if(btn){btn.textContent='CT';btn.disabled=false;}
+      return;
+    }
+    const iWine = m[1];
+    const ctUrl = CT+'/wine.asp?iWine='+iWine;
+    const r2 = await fetch(CT+'/wheretobuy/'+iWine+'/prices', {credentials:'include'});
+    const j = await r2.json();
+    const html2 = j.html || '';
+    const priceM = html2.match(/(\d+)[,\.](\d{2})/);
+    if (!priceM) {
+      toast('Wijn gevonden maar geen prijs beschikbaar', 'error');
+      if(linkDiv) linkDiv.innerHTML = `<a href="${ctUrl}" target="_blank" class="ct-link">🔗 Open op CT (geen prijs)</a>`;
+      if(btn){btn.textContent='CT';btn.disabled=false;}
+      return;
+    }
+    const price = parseFloat(priceM[0].replace(',','.'));
+    if(priceInput) priceInput.value = price;
+    if(linkDiv) linkDiv.innerHTML = `<a href="${ctUrl}" target="_blank" class="ct-link">✓ €${price} via CT — klik OK</a>`;
+    toast('€'+price+' gevonden via CellarTracker ✓', 'success');
+  } catch(e) {
+    toast('CT fout: '+e.message, 'error');
+    if(linkDiv) linkDiv.innerHTML = `<a href="${CT}/list.asp?Table=List&szSearch=${encodeURIComponent([name,producer,vintage].filter(Boolean).join(' '))}&fInCellar=0&iUserOverride=0" target="_blank" class="ct-link">🔗 Zoek handmatig op CT</a>`;
+  }
+  if(btn){btn.textContent='CT';btn.disabled=false;}
+}
+
+// ── SELECTIE ──
+function toggleSelect(id,cb){if(cb.checked)selectedPending.add(id);else selectedPending.delete(id);updateBulkBar();}
+function toggleSelectAll(cb){
+  const checkboxes=document.querySelectorAll('#pending-wrap tbody input[type=checkbox]');
+  checkboxes.forEach(box=>{box.checked=cb.checked;const rowId=box.closest('tr').id.replace('pr-','');if(cb.checked)selectedPending.add(rowId);else selectedPending.delete(rowId);});
+  updateBulkBar();
+}
+function clearSelection(){selectedPending.clear();document.querySelectorAll('#pending-wrap input[type=checkbox]').forEach(b=>b.checked=false);updateBulkBar();}
+function updateBulkBar(){const bar=document.getElementById('bulk-bar');const n=selectedPending.size;bar.style.display=n>0?'flex':'none';document.getElementById('bulk-label').textContent=n+' geselecteerd';}
+
+async function bulkDelete(){
+  const n=selectedPending.size;if(!n)return;
+  if(!confirm(`${n} pending wijnen verwijderen? Ze worden ook uit scan results verwijderd.`))return;
+  let done=0;
+  for(const id of selectedPending){
+    try{
+      const w=allPending.find(x=>x.id===id);
+      if(w){const nm=encodeURIComponent(w.name);await fetch(SB+'/scan_results?wine_name=ilike.'+nm,{method:'DELETE',headers:HD({'Prefer':'return=minimal'})}).catch(()=>{});}
+      await api('/wines?id=eq.'+id,'DELETE');done++;
+    }catch(e){console.warn(e.message);}
+  }
+  toast(`${done} verwijderd ✓`);selectedPending.clear();loadPending();loadStats();
+}
+
+async function approvePending(id){
+  const price=parseFloat(document.getElementById('pp-'+id)?.value);
+  if(!price||price<=0)return toast('Voer een geldige marktprijs in','error');
+  const colour=document.getElementById('pc-'+id)?.value||null;
+  try{
+    await api('/wines?id=eq.'+id,'PATCH',{market_price_eur:price,market_price_min:Math.round(price*.8*100)/100,market_price_max:Math.round(price*1.3*100)/100,price_source:'manual',colour:colour||undefined});
+    toast('Goedgekeurd ✓');
+    const row=document.getElementById('pr-'+id);if(row){row.style.opacity='.4';row.style.pointerEvents='none';}
+    setTimeout(()=>{allPending=allPending.filter(w=>w.id!==id);applyPendingFilters();},800);
+    loadStats();
+  }catch(e){toast('Fout: '+e.message,'error');}
+}
+
+async function delPending(id,btn){
+  if(!confirm('Wijn verwijderen? Hij wordt ook uit scan results verwijderd.'))return;
+  btn.textContent='...';btn.disabled=true;
+  try{
+    const w=allPending.find(x=>x.id===id);
+    if(w){const nm=encodeURIComponent(w.name);await fetch(SB+'/scan_results?wine_name=ilike.'+nm,{method:'DELETE',headers:HD({'Prefer':'return=minimal'})}).catch(()=>{});}
+    await api('/wines?id=eq.'+id,'DELETE');
+    allPending=allPending.filter(w=>w.id!==id);
+    toast('Verwijderd ✓');applyPendingFilters();loadStats();
+  }catch(e){toast('Fout: '+e.message,'error');btn.textContent='🗑';btn.disabled=false;}
+}
+
+function editPending(id){
+  const w=allPending.find(x=>x.id===id);if(!w)return;
+  const row=document.getElementById('pr-'+id);if(!row)return;
+  row.innerHTML=`
+    <td><input type="checkbox"></td>
+    <td><input type="text" id="pen-name-${id}" value="${esc(w.name)}" style="width:160px"></td>
+    <td><input type="text" id="pen-prod-${id}" value="${esc(w.producer||'')}" style="width:120px"></td>
+    <td><input type="text" id="pen-vint-${id}" value="${w.vintage||''}" style="width:55px" placeholder="NV"></td>
+    <td><select id="pen-col-${id}" style="width:90px;padding:4px 6px;border:1.5px solid var(--wine);border-radius:5px;font-size:12px">${['','red','white','sparkling','rosé','dessert','orange','fortified'].map(c=>`<option value="${c}"${w.colour===c?' selected':''}>${c||'onbekend'}</option>`).join('')}</select></td>
+    <td><input type="text" id="pen-reg-${id}" value="${esc(w.region||'')}" style="width:100px"></td>
+    <td><input type="text" id="pen-cou-${id}" value="${esc(w.country||'')}" style="width:80px"></td>
+    <td colspan="3" style="color:var(--muted);font-size:12px">${w.seen_count||1}× · ${w.seen_at_restaurant||'–'}</td>
+    <td><button class="btn btn-success btn-sm" onclick="savePendingEdit('${id}')">✓ Opslaan</button></td>
+    <td><button class="btn btn-secondary btn-sm" onclick="applyPendingFilters()">✕</button></td>`;
+}
+
+async function savePendingEdit(id){
+  const vintage=(()=>{const v=document.getElementById('pen-vint-'+id)?.value?.trim();if(!v||v.toLowerCase()==='nv')return null;const yr=parseInt(v);return(yr>=1900&&yr<=2030)?yr:null;})();
+  const patch={name:document.getElementById('pen-name-'+id)?.value.trim(),producer:document.getElementById('pen-prod-'+id)?.value.trim()||null,vintage,colour:document.getElementById('pen-col-'+id)?.value||null,region:document.getElementById('pen-reg-'+id)?.value.trim()||null,country:document.getElementById('pen-cou-'+id)?.value.trim()||null};
+  try{await api('/wines?id=eq.'+id,'PATCH',patch);const idx=allPending.findIndex(x=>x.id===id);if(idx>=0)allPending[idx]={...allPending[idx],...patch};toast('Opgeslagen ✓');applyPendingFilters();}
+  catch(e){toast('Fout: '+e.message,'error');}
+}
+
+// ── ADD TAB ──
+async function addWine(){
+  const name=document.getElementById('f-name').value.trim();const producer=document.getElementById('f-producer').value.trim();
+  if(!name||!producer)return toast('Naam en producent verplicht','error');
+  const price=parseFloat(document.getElementById('f-price-add').value)||null;
+  try{
+    await api('/wines','POST',{name,producer,vintage:parseInt(document.getElementById('f-vintage').value)||null,colour:document.getElementById('f-colour-add').value,region:document.getElementById('f-region-add').value.trim()||null,country:document.getElementById('f-country-add').value.trim()||null,appellation:document.getElementById('f-appellation').value.trim()||null,grape:document.getElementById('f-grape').value.trim()||null,market_price_eur:price,market_price_min:price?Math.round(price*.8*100)/100:null,market_price_max:price?Math.round(price*1.3*100)/100:null,price_source:'manual'});
+    toast('Wijn toegevoegd ✓');
+    ['f-name','f-producer','f-vintage','f-price-add','f-region-add','f-country-add','f-appellation','f-grape'].forEach(i=>document.getElementById(i).value='');
+    loadPriced();loadStats();
+  }catch(e){toast('Fout: '+e.message,'error');}
+}
+
+// ── UTILS ──
+function switchTab(t){
+  ['priced','pending','add'].forEach((x,i)=>{
+    document.getElementById('tab-'+x).style.display=x===t?'block':'none';
+    document.querySelectorAll('.tab-btn')[i].classList.toggle('active',x===t);
+  });
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;');}
+function toast(msg,type){const t=document.getElementById('toast');t.innerHTML=msg;t.className='toast '+(type||'success')+' show';setTimeout(()=>t.classList.remove('show'),4000);}
+
+if(localStorage.getItem('ws_aa')===btoa(PW)){document.getElementById('login-overlay').classList.add('hidden');init();}
+</script>
+</body>
+</html>
