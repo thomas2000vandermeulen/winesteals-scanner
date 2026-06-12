@@ -43,7 +43,7 @@ async function sbPatch(endpoint, body) {
   if (!res.ok) throw new Error(`Supabase PATCH ${res.status}`);
 }
 
-// Alleen echte leeswoordjes/functiewoorden - GEEN cuvée-onderscheidende woorden
+// Alleen echte leeswoordjes/functiewoorden - GEEN cuvÃ©e-onderscheidende woorden
 const STOP_WORDS = new Set([
   'de','du','des','d','l','le','la','les','et','and','von','van','del','della','di','dei','al','the',
   'a','an','of','or','en','sur','aux'
@@ -51,8 +51,8 @@ const STOP_WORDS = new Set([
 
 // "Type" woorden die voor producers worden gebruikt
 const PRODUCER_PREFIXES = new Set([
-  'chateau','château','domaine','domain','maison','cave','cellier','clos','domaines',
-  'tenuta','azienda','weingut','bodega','vina','viña','quinta'
+  'chateau','chÃ¢teau','domaine','domain','maison','cave','cellier','clos','domaines',
+  'tenuta','azienda','weingut','bodega','vina','viÃ±a','quinta'
 ]);
 
 function normalize(s) {
@@ -77,7 +77,7 @@ function tokensStrict(s) {
     .filter(w => w.length > 1 && !STOP_WORDS.has(w) && !PRODUCER_PREFIXES.has(w));
 }
 
-// ── STRIKTE MATCHING ──
+// ââ STRIKTE MATCHING ââ
 // Een match wordt alleen geaccepteerd als:
 // 1. ALLE betekenisvolle woorden uit de DB naam in de query staan
 // 2. ALLE betekenisvolle woorden uit de query in de DB naam staan
@@ -90,7 +90,7 @@ function scoreStrict(dbWine, queryName, queryProducer) {
 
   if (dbNameTokens.length === 0 || queryNameTokens.length === 0) return 0;
 
-  // ── NAAM CHECK ──
+  // ââ NAAM CHECK ââ
   // Elke token in DB naam MOET in query naam staan (of in query producer als fallback)
   // En vice versa
   const queryNameSet = new Set(queryNameTokens);
@@ -98,15 +98,15 @@ function scoreStrict(dbWine, queryName, queryProducer) {
   const dbNameSet = new Set(dbNameTokens);
   const dbProducerSet = new Set(dbProducerTokens);
 
-  // Combineer query naam + producer als één pool (soms staat producent in de naam)
+  // Combineer query naam + producer als Ã©Ã©n pool (soms staat producent in de naam)
   const queryPool = new Set([...queryNameTokens, ...queryProducerTokens]);
   const dbPool = new Set([...dbNameTokens, ...dbProducerTokens]);
 
   // KRITIEK: alle DB naam tokens moeten in query pool zitten
   const missingFromQuery = dbNameTokens.filter(t => !queryPool.has(t));
   if (missingFromQuery.length > 0) {
-    // De DB wijn heeft een extra cuvée-naam die niet in de query staat
-    // Bijv DB="Bandol La Tourtine", Query="Bandol" → "la", "tourtine" missen
+    // De DB wijn heeft een extra cuvÃ©e-naam die niet in de query staat
+    // Bijv DB="Bandol La Tourtine", Query="Bandol" â "la", "tourtine" missen
     return 0;
   }
 
@@ -114,28 +114,28 @@ function scoreStrict(dbWine, queryName, queryProducer) {
   const missingFromDb = queryNameTokens.filter(t => !dbPool.has(t));
   if (missingFromDb.length > 0) {
     // De query heeft een specifieke naam die niet in DB staat
-    // Bijv Query="Bandol La Tourtine", DB="Bandol" → "la", "tourtine" missen in DB
+    // Bijv Query="Bandol La Tourtine", DB="Bandol" â "la", "tourtine" missen in DB
     return 0;
   }
 
-  // ── PRODUCER CHECK ──
+  // ââ PRODUCER CHECK ââ
   // Als er een query producer is, moet er overlap zijn met DB producer
   if (queryProducerTokens.length > 0 && dbProducerTokens.length > 0) {
     const producerOverlap = queryProducerTokens.filter(t => dbProducerSet.has(t)).length;
     if (producerOverlap === 0) {
-      // Geen enkele producent-token overeen → andere producent
+      // Geen enkele producent-token overeen â andere producent
       return 0;
     }
     // Bij gedeeltelijke overlap (1 op 2 woorden): toch valid als sterk woord
     const producerCoverage = producerOverlap / Math.max(dbProducerTokens.length, queryProducerTokens.length);
     if (producerCoverage < 0.5) return 0;
   } else if (queryProducerTokens.length === 0 && dbProducerTokens.length > 0) {
-    // Geen producer in query → check of producer tokens in query naam staan
+    // Geen producer in query â check of producer tokens in query naam staan
     const producerInName = dbProducerTokens.filter(t => queryNameSet.has(t)).length;
     if (producerInName === 0) return 0;
   }
 
-  // ── SCORE BEREKENEN ──
+  // ââ SCORE BEREKENEN ââ
   // Hoe meer tokens overeenkomen, hoe hoger de score
   // Maximum: alle tokens komen 1-op-1 overeen
   let score = 100;
@@ -149,7 +149,7 @@ function scoreStrict(dbWine, queryName, queryProducer) {
     score += 10;
   }
 
-  // ── ALIAS CHECK ──
+  // ââ ALIAS CHECK ââ
   // Als er aliases zijn die exact matchen, bonus
   const aliases = (dbWine.search_aliases || []).map(a => tokensStrict(a));
   for (const aliasTokens of aliases) {
@@ -227,7 +227,7 @@ async function matchBatch(wines) {
       return null;
     }
 
-    console.log(`Match (score ${bestScore}): "${w.name}" → "${best.name}" / "${best.producer}"`);
+    console.log(`Match (score ${bestScore}): "${w.name}" â "${best.name}" / "${best.producer}"`);
 
     // Bepaal de juiste prijs voor de jaargang
     let priceData = null;
@@ -327,8 +327,8 @@ async function saveUnmatchedAsPending(wines) {
             producer: w.producer?.trim() || null,
             vintage: w.vintage || null,
             colour: w.colour || null,
-            region: w.region?.split(' · ')[0] || null,
-            country: w.region?.split(' · ')[1] || null,
+            region: w.region?.split(' Â· ')[0] || null,
+            country: w.region?.split(' Â· ')[1] || null,
             price_source: 'pending',
             seen_count: 1,
             seen_list_price: w.price || null
@@ -355,7 +355,7 @@ async function saveUnmatchedAsPending(wines) {
   }
 }
 
-// ── ENDPOINTS ──
+// ââ ENDPOINTS ââ
 
 app.get('/steals', async (req, res) => {
   try {
@@ -391,18 +391,18 @@ app.post('/scan', async (req, res) => {
     const prompt = `Je bent een expert in het lezen van restaurantwijnkaarten. Extraheer ALLE wijnen als JSON array.
 
 Geef ALLEEN een JSON array terug, geen uitleg of markdown. Elk object:
-- name: de VOLLEDIGE specifieke cuvée/wijn naam, inclusief alle onderscheidende woorden
-- producer: het wijnhuis of de producent (alleen de naam, zonder "Domaine"/"Château")
+- name: de VOLLEDIGE specifieke cuvÃ©e/wijn naam, inclusief alle onderscheidende woorden
+- producer: het wijnhuis of de producent (alleen de naam, zonder "Domaine"/"ChÃ¢teau")
 - vintage: het jaartal als integer, of null
 - price: flesprijs als getal
 
 KRITIEKE REGELS:
-1. Neem ALTIJD de volledige cuvée-naam mee. "Bandol La Tourtine" is NIET hetzelfde als "Bandol".
-2. Specifieke woorden zoals "La Tourtine", "La Migoua", "Vieilles Vignes", "Premier Cru", "Grand Cru", "Réserve", "Cuvée Spéciale" zijn ESSENTIEEL — laat ze NOOIT weg.
+1. Neem ALTIJD de volledige cuvÃ©e-naam mee. "Bandol La Tourtine" is NIET hetzelfde als "Bandol".
+2. Specifieke woorden zoals "La Tourtine", "La Migoua", "Vieilles Vignes", "Premier Cru", "Grand Cru", "RÃ©serve", "CuvÃ©e SpÃ©ciale" zijn ESSENTIEEL â laat ze NOOIT weg.
 3. Voorbeelden:
-   - "Bandol - La Tourtine Domaine Tempier 2020" → name: "Bandol La Tourtine", producer: "Tempier", vintage: 2020
-   - "Bandol Domaine Tempier 2020" → name: "Bandol", producer: "Tempier", vintage: 2020
-   - "Gevrey-Chambertin 1er Cru - Lavaux Saint-Jacques" → name: "Gevrey-Chambertin 1er Cru Lavaux Saint-Jacques"
+   - "Bandol - La Tourtine Domaine Tempier 2020" â name: "Bandol La Tourtine", producer: "Tempier", vintage: 2020
+   - "Bandol Domaine Tempier 2020" â name: "Bandol", producer: "Tempier", vintage: 2020
+   - "Gevrey-Chambertin 1er Cru - Lavaux Saint-Jacques" â name: "Gevrey-Chambertin 1er Cru Lavaux Saint-Jacques"
 4. Negeer sectieheaders, beschrijvingen, cocktails, bier, water
 5. Zelfde wijn in meerdere jaargangen = meerdere objecten
 6. Geen glasprijs-only entries
@@ -492,7 +492,7 @@ Wijnkaart van ${restaurant || 'restaurant'}:
           ...w,
           matched: !!(db?.market_price_eur),
           match_score: db?.match_score || 0,
-          region: db ? [db.region, db.country].filter(Boolean).join(' · ') : null,
+          region: db ? [db.region, db.country].filter(Boolean).join(' Â· ') : null,
           colour: db?.colour || null,
           market_price_eur: db?.market_price_eur || null,
           market_price_min: db?.market_price_min || null,
@@ -532,7 +532,7 @@ app.post('/price-lookup', async (req, res) => {
   if (wines.length > 30) return res.status(400).json({ error: 'Max 30 wijnen' });
 
   const wineList = wines.map((w, i) =>
-    `${i + 1}. "${w.name}" — ${w.producer || 'onbekend'}${w.vintage ? ', ' + w.vintage : ''}${w.country && w.country !== 'Unknown' ? ', ' + w.country : ''}`
+    `${i + 1}. "${w.name}" â ${w.producer || 'onbekend'}${w.vintage ? ', ' + w.vintage : ''}${w.country && w.country !== 'Unknown' ? ', ' + w.country : ''}`
   ).join('\n');
 
   try {
@@ -555,6 +555,50 @@ JSON array:` }]
     res.json({ success: true, prices });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+// ── CT PROXY ENDPOINT ──
+app.get('/ct-search', async (req, res) => {
+  const { q } = req.query;
+  if (!q) return res.status(400).json({ error: 'q parameter required' });
+  const cookie = process.env.CT_COOKIE || '';
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'Accept': 'text/html,application/xhtml+xml',
+    'Cookie': cookie
+  };
+  try {
+    // Stap 1: zoek pagina
+    const searchUrl = 'https://www.cellartracker.com/list.asp?Table=List&szSearch=' + encodeURIComponent(q) + '&fInCellar=0&iUserOverride=0';
+    const r1 = await fetch(searchUrl, { headers });
+    const html1 = await r1.text();
+    const iWines = [...new Set([...html1.matchAll(/iWine=(\d+)/g)].map(m => m[1]))].slice(0, 25);
+    if (!iWines.length) return res.json({ found: false, vintages: [] });
+
+    // Stap 2: per iWine vintage + prijs ophalen
+    const vintages = [];
+    for (const iWine of iWines) {
+      try {
+        const wr = await fetch('https://www.cellartracker.com/wine.asp?iWine=' + iWine, { headers });
+        const whtml = await wr.text();
+        const titleM = whtml.match(/<title>(\d{4})\s+([^,<]+)/);
+        const vintage = titleM ? parseInt(titleM[1]) : null;
+        const wineName = titleM ? titleM[2].trim() : q;
+        const pr = await fetch('https://www.cellartracker.com/wheretobuy/' + iWine + '/prices', { headers });
+        const pj = await pr.json();
+        const ph = pj.html || '';
+        const pm = ph.match(/(\d+)[,\.](\d{2})/);
+        const price = pm ? parseFloat(pm[0].replace(',', '.')) : null;
+        vintages.push({ iWine, vintage, name: wineName, price });
+        await new Promise(r => setTimeout(r, 200));
+      } catch(e) { /* skip */ }
+    }
+    res.json({ found: true, vintages });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
