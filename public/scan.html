@@ -215,7 +215,7 @@ const SUPABASE_URL='https://kdhczlabjecqxlyuxprl.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkaGN6bGFiamVjcXhseXV4cHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDI1MzEsImV4cCI6MjA5MTU3ODUzMX0.9vpr3P0Q6xhs_99nLsU_yE3Ht6prPe9cPjUrt0f5mX4';
 // Leeg = relatief pad /scan (als gehost op Railway)
 // Of vul Railway URL in: 'https://winestealsgithubio-production.up.railway.app'
-const RAILWAY_URL='https://winestealsgithubio-production.up.railway.app';
+const RAILWAY_URL='';
 
 /* ── TAAL ── */
 let lang='en';
@@ -313,16 +313,34 @@ async function runScan(text){
     setStep(0);fill.style.width='15%';await delay(400);
     setStep(1);fill.style.width='35%';
 
-    /* AI parsing via Railway */
+    /* AI parsing via /extract, dan matching via /scan */
     let parsed=[];
     try{
-      const endpoint=RAILWAY_URL?`${RAILWAY_URL}/scan`:'/scan';
-      const aiRes=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,restaurant:scannedRestaurant})});
-      if(!aiRes.ok)throw new Error(`/scan ${aiRes.status}`);
-      const aiData=await aiRes.json();
-      parsed=aiData.wines.map(w=>({name:w.name,producer:w.producer||'',vintage:w.vintage,listPrice:w.price,isNV:!w.vintage,bottleLabel:w.bottle_format||null,bottleFactor:1,_db:{market_price_eur:w.market_price_eur,market_price_min:w.market_price_min,market_price_max:w.market_price_max,region:w.region,colour:w.colour}}));
+      // Stap 1: extraheer wijnen via AI
+      const extractRes=await fetch('/extract',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+      if(!extractRes.ok)throw new Error('/extract '+extractRes.status);
+      const extractData=await extractRes.json();
+      const extractedWines=extractData.wines||[];
+      if(!extractedWines.length)throw new Error('Geen wijnen gevonden');
+
+      // Stap 2: match tegen database via /scan
+      const scanRes=await fetch('/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({wines:extractedWines})});
+      if(!scanRes.ok)throw new Error('/scan '+scanRes.status);
+      const scanData=await scanRes.json();
+
+      // Zet resultaten om naar het formaat dat de UI verwacht
+      parsed=(scanData.results||[]).map(w=>({
+        name:w.name,
+        producer:w.producer||'',
+        vintage:w.vintage,
+        listPrice:w.price,
+        isNV:!w.vintage,
+        bottleLabel:null,
+        bottleFactor:1,
+        _db:w.matched?{market_price_eur:w.market_price,market_price_min:w.market_price_min,market_price_max:w.market_price_max,region:w.region,colour:w.colour}:null
+      }));
     }catch(aiErr){
-      console.warn('AI scan failed, using regex fallback:',aiErr.message);
+      console.warn('AI scan mislukt, regex fallback:',aiErr.message);
       parsed=parseWineText(text);
     }
 
