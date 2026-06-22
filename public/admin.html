@@ -220,7 +220,7 @@ async function api(path,method,body){
   const isWrite=method&&method!=='GET';
   const r=await fetch(SB+path,{
     method:method||'GET',
-    headers:H(method==='GET'||!method?{'Prefer':'count=exact','Range-Unit':'items','Range':'0-9999'}:{'Prefer':'return=minimal'},isWrite),
+    headers:H(method==='GET'||!method?{'Prefer':'count=exact','Range-Unit':'items','Range':'0-99999'}:{'Prefer':'return=minimal'},isWrite),
     body:body?JSON.stringify(body):null
   });
   if(r.status!==200&&r.status!==201&&r.status!==204&&r.status!==206){
@@ -234,8 +234,10 @@ async function api(path,method,body){
   return{};
 }
 async function apiCount(path){
-  const r=await fetch(SB+path,{method:'HEAD',headers:H({'Prefer':'count=exact'})});
-  return parseInt((r.headers.get('content-range')||'').split('/')[1])||0;
+  const r=await fetch(SB+path,{method:'HEAD',headers:H({'Prefer':'count=exact','Range-Unit':'items','Range':'0-0'})});
+  const cr=r.headers.get('content-range')||'';
+  const total=parseInt(cr.split('/')[1]);
+  return isNaN(total)?0:total;
 }
 
 async function init(){await Promise.all([loadStats(),loadPriced(),loadPending()]);}
