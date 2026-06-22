@@ -52,6 +52,37 @@ function calcStealScore(restaurantPrice, marketPrice) {
   return Math.min(100, Math.round(discount * 150));
 }
 
+// ── BOTTLE FORMAT ──
+const BOTTLE_FORMATS = {
+  half:     { ml: 375,  multiplier: 0.65, label: 'Half bottle (0.375L)' },
+  standard: { ml: 750,  multiplier: 1.0,  label: 'Standard (0.75L)' },
+  magnum:   { ml: 1500, multiplier: 1.9,  label: 'Magnum (1.5L)' },
+  jeroboam: { ml: 3000, multiplier: 4.5,  label: 'Jeroboam (3L)' },
+  methuselah:{ ml: 6000, multiplier: 9.0, label: 'Methuselah (6L)' },
+};
+
+function detectBottleFormat(wineName, sectionHeader) {
+  const text = ((wineName || '') + ' ' + (sectionHeader || '')).toLowerCase();
+
+  // Expliciete volumes
+  if (/\b(0[\.,]375|37[\.,]5\s*cl|375\s*ml|demi|half\s*bott|halve\s*fles|piccolo|split)\b/.test(text)) return 'half';
+  if (/\b(1[\.,]5\s*l|150\s*cl|1500\s*ml|magnum)\b/.test(text)) return 'magnum';
+  if (/\b(3[\.,]0\s*l|300\s*cl|3000\s*ml|jeroboam|double\s*magnum)\b/.test(text)) return 'jeroboam';
+  if (/\b(6[\.,]0\s*l|600\s*cl|6000\s*ml|imp[eé]riale|methuselah|methusalem)\b/.test(text)) return 'methuselah';
+
+  // Sectieheaders in meerdere talen
+  if (/\b(magnum|magnums)\b/.test(text)) return 'magnum';
+  if (/\b(grote\s+form|large\s+form|grand[es]*\s+form|grandi\s+form|grandes\s+bote|format\s+sp[eé]c)\b/.test(text)) return 'magnum';
+  if (/\b(kleine\s+form|half\s*bott|demi.bou|piccolo|split)\b/.test(text)) return 'half';
+
+  return 'standard';
+}
+
+function adjustMarketPriceForFormat(marketPrice, format) {
+  const fmt = BOTTLE_FORMATS[format] || BOTTLE_FORMATS.standard;
+  return marketPrice * fmt.multiplier;
+}
+
 // ── STRICT MATCHING ──
 function tokenize(str) {
   return (str || '').toLowerCase()
@@ -159,13 +190,19 @@ app.post('/scan', async (req, res) => {
         if (score > bestScore) { bestScore = score; bestMatch = db; }
       }
       if (bestScore >= 80 && bestMatch) {
-        const marketPrice = bestMatch.market_price_eur;
-        const stealScore = calcStealScore(w.price, marketPrice);
+        const baseMarketPrice = bestMatch.market_price_eur;
+        const format = detectBottleFormat(w.name, w.bottle_format);
+        const adjustedMarketPrice = adjustMarketPriceForFormat(baseMarketPrice, format);
+        const stealScore = calcStealScore(w.price, adjustedMarketPrice);
+        const formatInfo = BOTTLE_FORMATS[format] || BOTTLE_FORMATS.standard;
         return {
           ...w,
           matched: true,
           wine_id: bestMatch.id,
-          market_price: marketPrice,
+          market_price: adjustedMarketPrice,
+          market_price_base: baseMarketPrice,
+          bottle_format: format,
+          bottle_format_label: formatInfo.label,
           steal_score: stealScore,
           colour: bestMatch.colour || w.colour,
           region: bestMatch.region || w.region,
@@ -207,6 +244,13 @@ For each wine extract:
 - price: price in euros as number or null
 - colour: "red", "white", "sparkling", "rosé", "dessert", or "orange"
 - region: region · country (e.g. "Bordeaux · France", "Barolo · Italy")
+- bottle_format: detect bottle size from the wine entry or its section header:
+  * "half" = 0.375L / 37.5cl / demi / half bottle / halve fles / piccolo
+  * "magnum" = 1.5L / 150cl / magnum / grote formaten / large formats / grands formats / grandi formati
+  * "jeroboam" = 3L / jeroboam / double magnum
+  * "methuselah" = 6L / impériale / methuselah
+  * "standard" = everything else (default)
+  If a section header says "Magnums" or "Grote Formaten", ALL wines in that section are that format.
 
 Wine list text:
 ${text}
