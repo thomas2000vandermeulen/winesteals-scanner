@@ -142,7 +142,7 @@ function filter(){
 function render(data){
   const el=document.getElementById('results-wrap');
   if(!data.length){el.innerHTML='<div class="empty"><p>Geen scan resultaten gevonden</p></div>';return;}
-  let h='<table><thead><tr><th>Score</th><th>Wijn</th><th>Restaurant</th><th>Rest.prijs</th><th>Marktprijs</th><th>Besparing</th><th>Datum</th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>Score</th><th>Wijn</th><th>Producent</th><th>Restaurant</th><th>Rest.prijs</th><th>Marktprijs</th><th>Besparing</th><th>Datum</th></tr></thead><tbody>';
   data.forEach(s=>{
     const saving=s.market_price&&s.restaurant_price?Math.round(s.market_price-s.restaurant_price):null;
     const sc=s.steal_score||0;
@@ -151,6 +151,7 @@ function render(data){
     h+=`<tr>
       <td><div class="score-badge" style="background:${bg}">${sc}</div></td>
       <td><strong>${esc(s.wine_name)}</strong>${s.vintage?'<br><small style="color:var(--muted)">'+s.vintage+'</small>':''}</td>
+      <td style="color:var(--muted);font-size:13px">${esc(s.producer||'–')}</td>
       <td>${esc(s.restaurants?.name||'–')}<br><small style="color:var(--muted)">${esc(s.restaurants?.city||'')}</small></td>
       <td><strong>€${s.restaurant_price}</strong></td>
       <td>€${s.market_price||'–'}</td>
