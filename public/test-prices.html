@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Prijzen Scraper Test — WineSteals</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--wine:#7B1C2E;--wine-dark:#4A0F1C;--gold:#C9A84C;--cream:#F8F4EE;--ink:#1A1208;--muted:#6B5E52;--border:rgba(123,28,46,0.15);--green:#2E7D32;--red:#C62828;--blue:#1565C0;--orange:#E65100}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding:24px}
+.container{max-width:900px;margin:0 auto}
+h1{font-family:'Playfair Display',serif;color:var(--wine-dark);font-size:28px;margin-bottom:6px}
+.subtitle{color:var(--muted);font-size:14px;margin-bottom:24px}
+.card{background:white;border-radius:10px;border:1px solid var(--border);padding:22px;margin-bottom:18px}
+.card h2{font-family:'Playfair Display',serif;font-size:18px;color:var(--wine-dark);margin-bottom:14px}
+.form-row{display:grid;grid-template-columns:2fr 2fr 1fr;gap:12px;margin-bottom:14px}
+label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:14px;background:white;font-family:'DM Sans',sans-serif}
+input:focus{outline:none;border-color:var(--wine)}
+.btn{padding:11px 22px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:500;background:var(--wine);color:white;font-family:'DM Sans',sans-serif}
+.btn:hover:not(:disabled){background:var(--wine-dark)}
+.btn:disabled{opacity:.45;cursor:default}
+.source-block{padding:14px 16px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;background:var(--cream)}
+.source-block.ok{border-color:rgba(46,125,50,.35);background:rgba(46,125,50,.04)}
+.source-block.fail{border-color:rgba(198,40,40,.35);background:rgba(198,40,40,.04)}
+.source-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.source-name{font-weight:600;font-size:14px}
+.source-status{font-size:12px;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:4px;background:white;border:1px solid var(--border)}
+.source-status.ok{color:var(--green);border-color:rgba(46,125,50,.3)}
+.source-status.fail{color:var(--red);border-color:rgba(198,40,40,.3)}
+.prices{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.price-pill{padding:3px 10px;background:white;border:1px solid var(--border);border-radius:12px;font-size:13px;font-family:'DM Mono',monospace}
+.price-pill.cheap{border-color:var(--green);color:var(--green);font-weight:600}
+.detail{font-size:11px;color:var(--muted);margin-top:6px;font-family:'DM Mono',monospace;word-break:break-all}
+.summary{padding:14px;background:rgba(123,28,46,.05);border-radius:8px;margin-top:12px;font-size:13px}
+.preset-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.preset{padding:6px 12px;background:white;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;color:var(--wine)}
+.preset:hover{background:var(--wine);color:white}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🧪 Prijzen Scraper Test</h1>
+  <p class="subtitle">Testen of we marktprijzen kunnen ophalen vanuit de browser. Probeer een wijn en kijk wat eruit komt.</p>
+
+  <div class="card">
+    <h2>Wijn invoeren</h2>
+    <div class="form-row">
+      <div>
+        <label>Wijnnaam</label>
+        <input id="name" type="text" placeholder="bijv. Brunello di Montalcino" value="Brunello di Montalcino"/>
+      </div>
+      <div>
+        <label>Producent</label>
+        <input id="producer" type="text" placeholder="bijv. Le Ragnaie" value="Le Ragnaie"/>
+      </div>
+      <div>
+        <label>Jaargang</label>
+        <input id="vintage" type="number" placeholder="2018" value="2018"/>
+      </div>
+    </div>
+    <button class="btn" id="search-btn" onclick="runTest()">🔍 Test alle bronnen</button>
+
+    <div class="preset-row">
+      <span style="font-size:12px;color:var(--muted);align-self:center">Voorbeelden:</span>
+      <button class="preset" onclick="setPreset('Sassicaia','Tenuta San Guido',2019)">Sassicaia 2019</button>
+      <button class="preset" onclick="setPreset('Le Difese','Tenuta San Guido',2021)">Le Difese 2021</button>
+      <button class="preset" onclick="setPreset('Chablis','Domaine William Fevre',2022)">Chablis Fèvre 2022</button>
+      <button class="preset" onclick="setPreset('Barolo','Ceretto',2019)">Barolo Ceretto 2019</button>
+      <button class="preset" onclick="setPreset('Châteauneuf-du-Pape','Domaine du Pegau',2020)">Pegau CdP 2020</button>
+    </div>
+  </div>
+
+  <div id="results"></div>
+
+</div>
+
+<script>
+function setPreset(n, p, v) {
+  document.getElementById('name').value = n;
+  document.getElementById('producer').value = p;
+  document.getElementById('vintage').value = v;
+}
+
+// CORS proxies om te testen
+const PROXIES = [
+  { name: 'corsproxy.io', wrap: (url) => 'https://corsproxy.io/?' + encodeURIComponent(url) },
+  { name: 'allorigins.win', wrap: (url) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url) },
+];
+
+// Bronnen om te testen
+const SOURCES = [
+  {
+    name: 'Vivino (directe API)',
+    url: (q, v) => `https://www.vivino.com/api/wines/search?q=${encodeURIComponent(q)}&year=${v}&country_codes[]=nl&start=0&per_page=10`,
+    needsProxy: true,
+    parse: (text) => {
+      try {
+        const data = JSON.parse(text);
+        const wines = data.matches || data.records || [];
+        const prices = [];
+        for (const w of wines.slice(0, 5)) {
+          const p = w.price?.amount || w.prices?.[0]?.amount;
+          if (p) prices.push({ price: p, label: w.name || w.seo_name || 'Vivino' });
+        }
+        return { prices, raw: `${wines.length} wijnen gevonden` };
+      } catch(e) { return { prices: [], raw: 'JSON parse fout' }; }
+    }
+  },
+  {
+    name: 'Wine-Searcher (find page)',
+    url: (q, v) => `https://www.wine-searcher.com/find/${encodeURIComponent(q.replace(/\s+/g,'+'))}/${v}/nl`,
+    needsProxy: true,
+    parse: (text) => {
+      // Wine-Searcher toont prijzen in HTML
+      const prices = [];
+      const m = text.match(/€\s*(\d+[,.]?\d{0,2})/g) || [];
+      const uniq = [...new Set(m.map(x => parseFloat(x.replace('€','').replace(',','.').trim())))];
+      for (const p of uniq.filter(x => x > 5 && x < 5000).slice(0, 10)) {
+        prices.push({ price: p, label: 'WS' });
+      }
+      return { prices, raw: `HTML ${text.length} bytes, ${prices.length} prijzen` };
+    }
+  },
+  {
+    name: 'Google Shopping (NL)',
+    url: (q, v) => `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(q + ' ' + v + ' wijn')}&hl=nl&gl=nl`,
+    needsProxy: true,
+    parse: (text) => {
+      const prices = [];
+      const m = text.match(/€\s*(\d+[,.]?\d{0,2})/g) || [];
+      const uniq = [...new Set(m.map(x => parseFloat(x.replace('€','').replace(',','.').trim())))];
+      for (const p of uniq.filter(x => x > 5 && x < 5000).slice(0, 10)) {
+        prices.push({ price: p, label: 'GS' });
+      }
+      return { prices, raw: `HTML ${text.length} bytes` };
+    }
+  },
+  {
+    name: 'DuckDuckGo (HTML zoek)',
+    url: (q, v) => `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q + ' ' + v + ' kopen wijn prijs')}`,
+    needsProxy: true,
+    parse: (text) => {
+      const prices = [];
+      const m = text.match(/€\s*(\d+[,.]?\d{0,2})/g) || [];
+      const uniq = [...new Set(m.map(x => parseFloat(x.replace('€','').replace(',','.').trim())))];
+      for (const p of uniq.filter(x => x > 5 && x < 5000).slice(0, 10)) {
+        prices.push({ price: p, label: 'DDG' });
+      }
+      return { prices, raw: `HTML ${text.length} bytes` };
+    }
+  }
+];
+
+async function tryFetch(url, useProxy) {
+  if (!useProxy) {
+    try {
+      const r = await fetch(url, { mode: 'cors' });
+      return { ok: r.ok, text: await r.text(), via: 'direct', status: r.status };
+    } catch(e) {
+      return { ok: false, error: e.message, via: 'direct' };
+    }
+  }
+  // Probeer alle proxies
+  for (const proxy of PROXIES) {
+    try {
+      const r = await fetch(proxy.wrap(url), { 
+        headers: { 'Accept': 'text/html,application/json,*/*' }
+      });
+      if (r.ok) {
+        const text = await r.text();
+        if (text.length > 100) return { ok: true, text, via: proxy.name, status: r.status };
+      }
+    } catch(e) { /* try next */ }
+  }
+  return { ok: false, error: 'Alle proxies gefaald' };
+}
+
+async function testSource(source, query, vintage, container) {
+  const block = document.createElement('div');
+  block.className = 'source-block';
+  block.innerHTML = `
+    <div class="source-header">
+      <div class="source-name">${source.name}</div>
+      <div class="source-status">⏳ bezig...</div>
+    </div>
+  `;
+  container.appendChild(block);
+
+  const url = source.url(query, vintage);
+  const result = await tryFetch(url, source.needsProxy);
+
+  if (!result.ok) {
+    block.classList.add('fail');
+    block.querySelector('.source-status').className = 'source-status fail';
+    block.querySelector('.source-status').textContent = '✗ gefaald';
+    block.innerHTML += `<div class="detail">${result.error || 'HTTP ' + result.status}</div>`;
+    return { source: source.name, prices: [], ok: false };
+  }
+
+  const { prices, raw } = source.parse(result.text);
+
+  if (prices.length > 0) {
+    block.classList.add('ok');
+    block.querySelector('.source-status').className = 'source-status ok';
+    block.querySelector('.source-status').textContent = `✓ ${prices.length} prijzen via ${result.via}`;
+    
+    const sorted = [...prices].sort((a,b) => a.price - b.price);
+    const cheapest = sorted[0].price;
+    
+    const pillsHtml = sorted.slice(0, 12).map(p => 
+      `<span class="price-pill ${p.price === cheapest ? 'cheap' : ''}">€${p.price.toFixed(2)}</span>`
+    ).join('');
+    block.innerHTML += `<div class="prices">${pillsHtml}</div><div class="detail">${raw}</div>`;
+  } else {
+    block.classList.add('fail');
+    block.querySelector('.source-status').className = 'source-status fail';
+    block.querySelector('.source-status').textContent = `⚠ geen prijzen via ${result.via}`;
+    block.innerHTML += `<div class="detail">${raw || 'Geen € symbolen gevonden in response'}</div>`;
+  }
+
+  return { source: source.name, prices: prices.map(p => p.price), ok: prices.length > 0 };
+}
+
+async function runTest() {
+  const name = document.getElementById('name').value.trim();
+  const producer = document.getElementById('producer').value.trim();
+  const vintage = document.getElementById('vintage').value.trim();
+  if (!name) { alert('Vul een wijnnaam in'); return; }
+
+  const query = [producer, name].filter(Boolean).join(' ');
+  const btn = document.getElementById('search-btn');
+  btn.disabled = true; btn.textContent = '⏳ Bronnen testen...';
+
+  const results = document.getElementById('results');
+  results.innerHTML = `<div class="card"><h2>Resultaten voor: ${query} ${vintage}</h2><div id="src-results"></div><div id="summary"></div></div>`;
+
+  const container = document.getElementById('src-results');
+  const allResults = [];
+  
+  // Test alle bronnen parallel
+  const promises = SOURCES.map(s => testSource(s, query, vintage, container));
+  const settled = await Promise.all(promises);
+  allResults.push(...settled);
+
+  // Samenvatting
+  const allPrices = allResults.flatMap(r => r.prices).sort((a,b) => a-b);
+  const summaryEl = document.getElementById('summary');
+  if (allPrices.length > 0) {
+    const median = allPrices[Math.floor(allPrices.length / 2)];
+    const min = allPrices[0];
+    const max = allPrices[allPrices.length - 1];
+    const workingSources = allResults.filter(r => r.ok).length;
+    summaryEl.innerHTML = `
+      <div class="summary">
+        <strong>📊 Samenvatting</strong><br>
+        ${workingSources}/${allResults.length} bronnen werkten — ${allPrices.length} prijzen totaal<br>
+        <span style="color:var(--green);font-weight:600">Goedkoopste: €${min.toFixed(2)}</span> · 
+        Mediaan: €${median.toFixed(2)} · 
+        Duurste: €${max.toFixed(2)}
+      </div>
+    `;
+  } else {
+    summaryEl.innerHTML = `<div class="summary" style="background:rgba(198,40,40,.05)">❌ Geen enkele bron gaf prijzen terug. Tijd om een betaalde service te overwegen.</div>`;
+  }
+
+  btn.disabled = false; btn.textContent = '🔍 Test alle bronnen';
+}
+</script>
+
+</body>
+</html>
