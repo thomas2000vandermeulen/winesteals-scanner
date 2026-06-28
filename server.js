@@ -96,17 +96,29 @@ function scoreStrict(scanned, dbWine) {
   const dbName = tokenize(dbWine.name);
   const scanProd = tokenize(scanned.producer || '');
   const dbProd = tokenize(dbWine.producer || '');
-  const scanAll = [...new Set([...scanName, ...scanProd])];
-  const dbAll = [...new Set([...dbName, ...dbProd])];
-  if (!scanAll.length || !dbAll.length) return 0;
-  const inDb = scanAll.filter(t => dbAll.includes(t)).length;
-  const inScan = dbAll.filter(t => scanAll.includes(t)).length;
-  const recall = inDb / scanAll.length;
-  const precision = inScan / dbAll.length;
-  if (recall < 0.6 || precision < 0.6) return 0;
-  const score = (recall + precision) / 2 * 100;
-  if (scanned.vintage && dbWine.vintage && scanned.vintage !== dbWine.vintage) return score * 0.7;
-  return score;
+
+  // Naam moet zelfstandig goed matchen — producent is geen vervanging
+  if (!scanName.length || !dbName.length) return 0;
+  const nameInDb  = scanName.filter(t => dbName.includes(t)).length;
+  const nameInScan = dbName.filter(t => scanName.includes(t)).length;
+  const nameRecall    = nameInDb  / scanName.length;
+  const namePrecision = nameInScan / dbName.length;
+
+  // Naam moet op zichzelf al voldoende overlappen
+  if (nameRecall < 0.6 || namePrecision < 0.6) return 0;
+  let score = (nameRecall + namePrecision) / 2 * 100;
+
+  // Producent als bonus (max +10), nooit als reddingsboei
+  if (scanProd.length && dbProd.length) {
+    const prodMatch = scanProd.filter(t => dbProd.includes(t)).length;
+    const prodScore = prodMatch / Math.max(scanProd.length, dbProd.length);
+    score += prodScore * 10;
+  }
+
+  // Verkeerd jaargang = hard aftrek
+  if (scanned.vintage && dbWine.vintage && scanned.vintage !== dbWine.vintage) return score * 0.5;
+
+  return Math.min(score, 100);
 }
 
 // ── SAVE FUNCTIONS ──
@@ -189,7 +201,7 @@ app.post('/scan', async (req, res) => {
         const score = scoreStrict(w, db);
         if (score > bestScore) { bestScore = score; bestMatch = db; }
       }
-      if (bestScore >= 80 && bestMatch) {
+      if (bestScore >= 85 && bestMatch) {
         const baseMarketPrice = bestMatch.market_price_eur;
         const format = detectBottleFormat(w.name, w.bottle_format);
         const adjustedMarketPrice = adjustMarketPriceForFormat(baseMarketPrice, format);
