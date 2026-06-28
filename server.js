@@ -354,4 +354,67 @@ app.get('/ct-search', async (req, res) => {
 // ── HEALTH CHECK ──
 app.get('/health', (req, res) => res.json({ status: 'ok', version: 'v3' }));
 
+
+// ── SERPAPI: GOOGLE SHOPPING PRICE LOOKUP ──
+app.get('/api/price-lookup', async (req, res) => {
+  const { name, producer, vintage } = req.query;
+  if (!name) return res.status(400).json({ error: 'name vereist' });
+
+  const SERPAPI_KEY = process.env.SERPAPI_KEY;
+  if (!SERPAPI_KEY) return res.status(500).json({ error: 'SERPAPI_KEY niet geconfigureerd' });
+
+  const query = [producer, name, vintage, 'wijn'].filter(Boolean).join(' ');
+  const url = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(query)}&gl=nl&hl=nl&api_key=${SERPAPI_KEY}`;
+
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return res.status(502).json({ error: 'SerpAPI fout: ' + r.status });
+    const data = await r.json();
+
+    // Parse shopping results
+    const items = data.shopping_results || [];
+    const prices = [];
+    for (const item of items.slice(0, 20)) {
+      // SerpAPI returnt price als "€ 45,00" of "45.00 €" — parse robuust
+      const priceStr = item.extracted_price || (item.price || '').replace(/[^0-9.,]/g, '');
+      const price = typeof priceStr === 'number' ? priceStr : parseFloat(String(priceStr).replace(',', '.'));
+      if (price && price >= 5 && price <= 5000) {
+        prices.push({
+          price,
+          retailer: item.source || item.seller || 'onbekend',
+          title: item.title || '',
+          link: item.link || item.product_link || ''
+        });
+      }
+    }
+    prices.sort((a,b) => a.price - b.price);
+
+    // Statistieken
+    if (!prices.length) return res.json({ found: false, prices: [], query });
+
+    const values = prices.map(p => p.price);
+    const median = values[Math.floor(values.length / 2)];
+    const q1 = values[Math.floor(values.length * 0.25)];
+    const q3 = values[Math.floor(values.length * 0.75)];
+    const spread = q1 > 0 ? (q3 - q1) / median : 0;
+    const confidence = spread < 0.2 ? 'high' : spread < 0.5 ? 'medium' : 'low';
+
+    res.json({
+      found: true,
+      query,
+      prices,
+      stats: {
+        count: prices.length,
+        min: values[0],
+        max: values[values.length - 1],
+        median,
+        confidence,
+        spread_pct: Math.round(spread * 100)
+      }
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`WineSteals server v3 (strict matching) poort ${PORT}`));
