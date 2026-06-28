@@ -19,7 +19,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .admin-nav{background:var(--wine-dark);display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;position:sticky;top:0;z-index:100}
 .nav-brand{color:white;font-family:'Playfair Display',serif;font-size:17px;text-decoration:none;font-weight:700}
 .nav-links{display:flex;gap:4px}
-.nav-link{color:rgba(255,255,255,0.7);text-decoration:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;transition:all .15s}
+.nav-link{color:rgba(255,255,255,0.7);text-decoration:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;transition:all .15s;white-space:nowrap}
 .nav-link:hover{color:white;background:rgba(255,255,255,0.1)}
 .nav-link.active{color:white;background:rgba(255,255,255,0.18)}
 .container{max-width:1600px;margin:0 auto;padding:24px 32px}
@@ -99,7 +99,7 @@ td input[type=number],td input[type=text],td select{padding:4px 6px;border:1.5px
     <a href="/admin-scans.html" class="nav-link">Scans</a>
     <a href="/admin-restaurants.html" class="nav-link">Restaurants</a>
     <a href="/admin-wineapi.html" class="nav-link">WineAPI</a>
-    <a href="/admin-ct-batch.html" class="nav-link">CT Batch</a>
+    <a href="/admin-ct-batch.html" class="nav-link">Wine-Searcher</a>
   </div>
   <div style="display:flex;gap:14px;font-size:12px;color:rgba(255,255,255,0.75)">
     <span>Totaal: <strong id="s-total" style="color:#C9A84C">–</strong></span>
